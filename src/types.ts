@@ -11,6 +11,17 @@ export interface Cell {
   y: number
 }
 
+/**
+ * Continuous position + facing of the user on the grid. x/y are in cell-center
+ * units (an integer + 0.5 is the middle of a cell); heading is radians, where
+ * -PI/2 points "up" (toward smaller y / the top of the map).
+ */
+export interface Pose {
+  x: number
+  y: number
+  heading: number
+}
+
 export type TileKind =
   | 'floor' // walkable
   | 'wall' // store perimeter / structural, blocked

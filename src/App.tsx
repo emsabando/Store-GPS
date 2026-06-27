@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { getProvider, type StoreSummary } from './data'
-import type { Cell, Maneuver, Product, Store } from './types'
+import { buildStore } from './data/layout'
+import type { Cell, Maneuver, Product, Route, Store } from './types'
 import { findPath } from './lib/pathfinding'
 import { buildRoute, etaSeconds, METERS_PER_CELL } from './lib/navigation'
 import StoreCanvas from './components/StoreCanvas'
 import SearchPanel from './components/SearchPanel'
+import { usePositioning, type PositioningMode, type WalkDir } from './positioning/usePositioning'
 
 const MANEUVER_ICON: Record<Maneuver, string> = {
   start: '↑',
@@ -17,12 +19,21 @@ const MANEUVER_ICON: Record<Maneuver, string> = {
   arrive: '◎',
 }
 
+// Fallback so the positioning hook always has a valid store (hooks can't be
+// conditional); never rendered.
+const PLACEHOLDER_STORE = buildStore({ id: '_', name: '', address: '', depts: [] })
+
+const POS_MODES: { id: PositioningMode; label: string; hint: string }[] = [
+  { id: 'autopilot', label: 'Auto-walk', hint: 'Demo: walks the route for you.' },
+  { id: 'walk', label: 'Walk', hint: 'Drive with arrow keys / WASD or the pad.' },
+  { id: 'device', label: 'Device', hint: 'Use your phone’s step + compass sensors.' },
+]
+
 function formatEta(seconds: number): string {
   if (seconds < 60) return `${seconds}s`
   return `${Math.round(seconds / 60)} min`
 }
 
-// Local relevance ranking for catalog (mock) search.
 function filterProducts(products: Product[], query: string): Product[] {
   const q = query.trim().toLowerCase()
   if (!q) return products
@@ -52,25 +63,17 @@ export default function App() {
   const [query, setQuery] = useState('')
   const [liveResults, setLiveResults] = useState<Product[]>([])
   const [selected, setSelected] = useState<Product | null>(null)
-  const [userCell, setUserCell] = useState<Cell | null>(null)
+  const [userCell, setUserCell] = useState<Cell>(PLACEHOLDER_STORE.entrance)
 
-  const [mode, setMode] = useState<'overview' | 'navigate'>('overview')
-  const [playing, setPlaying] = useState(false)
-  const [arrived, setArrived] = useState(false)
-  const [stepIndex, setStepIndex] = useState(0)
-  const [remaining, setRemaining] = useState(0)
+  const [view, setView] = useState<'overview' | 'navigate'>('overview')
+  const [posMode, setPosMode] = useState<PositioningMode>('autopilot')
 
   const [loadingStores, setLoadingStores] = useState(false)
   const [loadingStore, setLoadingStore] = useState(false)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const resetNav = useCallback(() => {
-    setMode('overview')
-    setPlaying(false)
-    setArrived(false)
-    setStepIndex(0)
-  }, [])
+  const navigating = view === 'navigate'
 
   const selectStore = useCallback(
     (id: string) => {
@@ -78,7 +81,7 @@ export default function App() {
       setSelected(null)
       setQuery('')
       setLiveResults([])
-      resetNav()
+      setView('overview')
       setLoadingStore(true)
       setError(null)
       provider
@@ -90,10 +93,9 @@ export default function App() {
         .catch((e) => setError(String(e?.message ?? e)))
         .finally(() => setLoadingStore(false))
     },
-    [provider, resetNav],
+    [provider],
   )
 
-  // Initial store list for fixed-list providers (mock). ZIP providers wait.
   useEffect(() => {
     if (provider.locatesByZip) return
     setLoadingStores(true)
@@ -107,7 +109,6 @@ export default function App() {
       .finally(() => setLoadingStores(false))
   }, [provider, selectStore])
 
-  // Live (Kroger) search: debounced fetch that rebuilds the store from results.
   useEffect(() => {
     if (provider.mode !== 'live' || !storeId || !provider.searchStore) return
     const term = query.trim()
@@ -122,7 +123,7 @@ export default function App() {
         const st = await provider.searchStore!(storeId, term)
         if (!active) return
         setStore(st)
-        setUserCell((cur) => cur ?? st.entrance)
+        setUserCell(st.entrance)
         setLiveResults(st.products)
       } catch (e) {
         if (active) setError(String((e as Error)?.message ?? e))
@@ -142,22 +143,42 @@ export default function App() {
   )
   const results = provider.mode === 'catalog' ? catalogResults : liveResults
 
+  const activeStore = store ?? PLACEHOLDER_STORE
+
+  // Route is shared with the positioning hook by ref: the hook reads it live in
+  // its loop, and we assign the latest value below after computing it (its
+  // origin depends on the hook's liveCell, so it can't be a hook argument).
+  const routeRef = useRef<Route | null>(null)
+
+  // Positioning layer owns the live pose. Re-route from the live cell while
+  // physically walking; keep a fixed origin for the auto-walk demo.
+  const { poseRef, liveCell, nav, deviceStatus, recenter, setHeld, startDevice } = usePositioning({
+    store: activeStore,
+    routeRef,
+    mode: posMode,
+    active: navigating,
+    originCell: userCell,
+  })
+
+  const routeOrigin = navigating && posMode !== 'autopilot' ? liveCell : userCell
+
   const route = useMemo(() => {
-    if (!store || !userCell || !selected) return null
-    const path = findPath(store, userCell, selected.access)
+    if (!store || !selected) return null
+    const path = findPath(store, routeOrigin, selected.access)
     if (!path) return null
     return buildRoute(path, `${selected.name} · ${selected.aisle}`)
-  }, [store, userCell, selected])
+  }, [store, routeOrigin, selected])
+  routeRef.current = route
 
   const handleQuery = (q: string) => {
     setQuery(q)
     setSelected(null)
-    resetNav()
+    setView('overview')
   }
 
   const handleSelect = (p: Product) => {
     setSelected(p)
-    resetNav()
+    setView('overview')
   }
 
   const handleLocate = (e: React.FormEvent) => {
@@ -180,37 +201,33 @@ export default function App() {
 
   const startNav = () => {
     if (!route) return
-    setArrived(false)
-    setStepIndex(0)
-    setMode('navigate')
-    setPlaying(true)
+    setView('navigate')
   }
 
-  const handleProgress = useCallback((step: number, remainingMeters: number) => {
-    setStepIndex(step)
-    setRemaining(remainingMeters)
-  }, [])
-
-  const handleArrive = useCallback(() => {
-    setPlaying(false)
-    setArrived(true)
-  }, [])
+  const endNav = () => setView('overview')
 
   const handlePickCell = (cell: Cell) => {
     if (!store) return
     const kind = store.tiles[cell.y][cell.x]
     if (kind === 'shelf' || kind === 'wall') return
     setUserCell(cell)
+    recenter(cell)
   }
 
-  const here = userCell ?? store?.entrance ?? null
+  const choosePosMode = (m: PositioningMode) => {
+    setPosMode(m)
+    if (m === 'device') startDevice()
+  }
+
   const distanceMeters = route ? Math.round(route.distance * METERS_PER_CELL) : 0
   const eta = route ? etaSeconds(route) : 0
-  const currentStep = route?.steps[stepIndex]
+  const currentStep = route?.steps[nav.stepIndex]
+  const arrived = nav.arrived
   const liveEmpty = provider.mode === 'live' && !query && (!store || store.products.length === 0)
+  const showJoystick = navigating && posMode === 'walk' && !arrived
 
   return (
-    <div className={`app ${mode === 'navigate' ? 'navigating' : ''}`}>
+    <div className={`app ${navigating ? 'navigating' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden>
@@ -266,7 +283,7 @@ export default function App() {
       )}
 
       <main className="layout">
-        {mode === 'overview' && (
+        {!navigating && (
           <aside className="sidebar">
             <SearchPanel
               results={results}
@@ -288,17 +305,14 @@ export default function App() {
         )}
 
         <section className="stage">
-          {store && here ? (
+          {store ? (
             <StoreCanvas
               store={store}
               route={route}
               target={selected}
-              userCell={here}
-              mode={mode}
-              playing={playing}
+              poseRef={poseRef}
+              mode={view}
               onPickCell={handlePickCell}
-              onProgress={handleProgress}
-              onArrive={handleArrive}
             />
           ) : (
             <div className="stage-empty">
@@ -312,7 +326,7 @@ export default function App() {
             </div>
           )}
 
-          {store && mode === 'overview' && (
+          {store && !navigating && (
             <div className="overview-hint">
               <span className="addr">
                 {store.name}
@@ -321,12 +335,12 @@ export default function App() {
               <span className="tip">
                 {liveEmpty
                   ? 'Search a product to map its aisle on live data.'
-                  : "Tip: tap anywhere on the floor to set where you're standing."}
+                  : "Tip: tap the floor to set where you're standing."}
               </span>
             </div>
           )}
 
-          {mode === 'overview' && selected && (
+          {!navigating && selected && (
             <div className="dest-card">
               <div className="dest-head">
                 <span className="dest-emoji" aria-hidden>
@@ -360,23 +374,70 @@ export default function App() {
                   availability
                 </span>
               </div>
+
+              <div className="pos-mode" role="group" aria-label="Positioning mode">
+                {POS_MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    className={posMode === m.id ? 'active' : ''}
+                    onClick={() => choosePosMode(m.id)}
+                    title={m.hint}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              {posMode === 'device' && deviceStatus !== 'active' && (
+                <p className="pos-note">
+                  {deviceStatus === 'unsupported'
+                    ? 'Motion sensors aren’t available on this device — try Walk mode.'
+                    : deviceStatus === 'denied'
+                      ? 'Motion access was denied. Enable it or use Walk mode.'
+                      : 'Tap “Start navigation”, then allow motion access on your phone.'}
+                </p>
+              )}
+
               <button className="go-btn" onClick={startNav} disabled={!route}>
                 {route ? 'Start navigation' : 'No route available'}
               </button>
             </div>
           )}
 
-          {mode === 'navigate' && currentStep && !arrived && (
+          {navigating && currentStep && !arrived && (
             <div className="nav-banner">
               <span className="nav-icon">{MANEUVER_ICON[currentStep.maneuver]}</span>
               <div className="nav-text">
                 <strong>{currentStep.instruction}</strong>
-                <span>{remaining} m to destination</span>
+                <span>
+                  {nav.remainingMeters} m to destination
+                  {posMode !== 'autopilot' ? ' · live position' : ''}
+                </span>
               </div>
             </div>
           )}
 
-          {mode === 'navigate' && arrived && selected && (
+          {showJoystick && (
+            <div className="joystick" aria-label="Walk controls">
+              {(['up', 'left', 'right', 'down'] as WalkDir[]).map((dir) => (
+                <button
+                  key={dir}
+                  className={`pad pad-${dir}`}
+                  onPointerDown={(e) => {
+                    e.preventDefault()
+                    setHeld(dir, true)
+                  }}
+                  onPointerUp={() => setHeld(dir, false)}
+                  onPointerLeave={() => setHeld(dir, false)}
+                  onPointerCancel={() => setHeld(dir, false)}
+                  aria-label={`Walk ${dir}`}
+                >
+                  {dir === 'up' ? '▲' : dir === 'down' ? '▼' : dir === 'left' ? '◀' : '▶'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {navigating && arrived && selected && (
             <div className="arrive-card">
               <span className="arrive-emoji" aria-hidden>
                 {selected.emoji}
@@ -392,14 +453,14 @@ export default function App() {
                       selected.price != null ? `$${selected.price.toFixed(2)}` : ''
                     }`.replace(/ · $/, '')}
               </span>
-              <button className="go-btn" onClick={resetNav}>
+              <button className="go-btn" onClick={endNav}>
                 Done
               </button>
             </div>
           )}
 
-          {mode === 'navigate' && !arrived && (
-            <button className="exit-btn" onClick={resetNav} aria-label="Exit navigation">
+          {navigating && !arrived && (
+            <button className="exit-btn" onClick={endNav} aria-label="Exit navigation">
               ✕ End
             </button>
           )}

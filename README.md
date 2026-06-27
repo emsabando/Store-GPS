@@ -125,19 +125,37 @@ swappable:
 Adding another retailer is one new class implementing `DataProvider` — nothing
 in the map, pathfinding, or navigation code changes.
 
-## Indoor positioning (the other half of "real")
+## Indoor positioning ("you are here")
 
-This MVP routes from a **tap-to-place** "you are here." Real indoor positioning
-— Wi-Fi/BLE beacons, UWB, or camera/AR — is the remaining piece for true
-hands-free navigation, since phone GPS doesn't work reliably indoors. It plugs
-in by feeding a live position into the app's `userCell` state instead of the tap
-fallback.
+Phone GPS doesn't work reliably indoors and we assume no beacons, so positioning
+uses **Pedestrian Dead Reckoning (PDR)**: start from a known point, then advance
+the position from motion, **map-matched** to the store's walkable corridors so
+drift can't walk you through a shelf. As you move, the route **continuously
+re-routes from your live position** — true turn-by-turn, not a fixed line.
+
+Three interchangeable positioning sources (pick one before navigating):
+
+| Mode | Source | Where it shines |
+| --- | --- | --- |
+| **Auto-walk** | Walks the route for you | Demos / desktop preview |
+| **Walk** | Arrow keys / WASD or the on-screen pad | Desktop testing, no hardware |
+| **Device** | Phone accelerometer (step count) + compass | Real in-store use on a phone |
+
+All three drive the **same** engine (`src/lib/positioning.ts`); only the input
+differs. Tap the floor any time to recalibrate "you are here." This is the
+infrastructure-free baseline — BLE beacons, Wi-Fi RTT, UWB, or camera/AR can be
+added later as higher-accuracy sources feeding the same engine.
+
+Relevant files: `src/lib/positioning.ts` (PDR + map-matching + route
+projection), `src/lib/sensors.ts` (step detector + compass), and
+`src/positioning/usePositioning.ts` (the source-agnostic controller hook).
 
 ## Roadmap
 
 - ✅ Pluggable data layer for real inventory APIs
 - ✅ Live Kroger provider (Kroger / Fry's / Ralphs / King Soopers / …)
-- Indoor positioning adapters (BLE beacons / Wi-Fi RTT / AR)
+- ✅ Infrastructure-free indoor positioning (PDR + map-matching + live re-route)
+- Higher-accuracy positioning adapters (BLE beacons / Wi-Fi RTT / UWB / AR)
 - Voice-guided directions
 - Multi-stop shopping lists with optimized routing
 - Native mobile build

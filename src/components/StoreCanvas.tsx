@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
-import type { Cell, Product, Route, Store } from '../types'
-import { METERS_PER_CELL } from '../lib/navigation'
+import { useEffect, useRef, type MutableRefObject } from 'react'
+import type { Cell, Pose, Product, Route, Store } from '../types'
+import { projectOntoRoute } from '../lib/positioning'
 
 export type ViewMode = 'overview' | 'navigate'
 
@@ -8,34 +8,14 @@ interface Props {
   store: Store
   route: Route | null
   target: Product | null
-  userCell: Cell
+  /** Live user pose, mutated in place by the positioning layer. */
+  poseRef: MutableRefObject<Pose>
   mode: ViewMode
-  /** True while the avatar should animate along the route. */
-  playing: boolean
   onPickCell?: (cell: Cell) => void
-  /** Fires when the active turn-by-turn step changes (throttled, not per-frame). */
-  onProgress?: (stepIndex: number, remainingMeters: number) => void
-  onArrive?: () => void
 }
 
-const sign = (n: number) => (n > 0 ? 1 : n < 0 ? -1 : 0)
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
-// Indices in route.cells where a new straight segment begins. Used to map the
-// avatar's continuous progress back to a discrete turn-by-turn step.
-function segmentStarts(cells: Cell[]): number[] {
-  const starts = [0]
-  for (let i = 2; i < cells.length; i++) {
-    const px = sign(cells[i - 1].x - cells[i - 2].x)
-    const py = sign(cells[i - 1].y - cells[i - 2].y)
-    const cx = sign(cells[i].x - cells[i - 1].x)
-    const cy = sign(cells[i].y - cells[i - 1].y)
-    if (px !== cx || py !== cy) starts.push(i - 1)
-  }
-  return starts
-}
-
-const SPEED_CELLS_PER_SEC = 4.2
 const TILE_COLORS: Record<string, string> = {
   floor: '#111a2e',
   wall: '#1f2a44',
@@ -46,29 +26,14 @@ const TILE_COLORS: Record<string, string> = {
 
 export default function StoreCanvas(props: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  // Latest props, read inside the rAF loop without restarting it every render.
   const propsRef = useRef(props)
   propsRef.current = props
-
-  const progressRef = useRef(0) // float index along route.cells
-  const lastRouteRef = useRef<Route | null>(null)
-  const lastStepRef = useRef(-1)
-  const arrivedRef = useRef(false)
-
-  // Reset animation whenever the route changes.
-  useEffect(() => {
-    progressRef.current = 0
-    lastStepRef.current = -1
-    arrivedRef.current = false
-    lastRouteRef.current = props.route
-  }, [props.route])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
     let raf = 0
-    let prevT = performance.now()
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -81,57 +46,11 @@ export default function StoreCanvas(props: Props) {
     window.addEventListener('resize', resize)
 
     const frame = (now: number) => {
-      const dt = Math.min(0.05, (now - prevT) / 1000)
-      prevT = now
       const p = propsRef.current
       const rect = canvas.getBoundingClientRect()
-      const w = rect.width
-      const h = rect.height
-
-      // Advance the avatar.
-      const route = p.route
-      const maxProgress = route ? route.cells.length - 1 : 0
-      if (p.playing && route && progressRef.current < maxProgress) {
-        progressRef.current = Math.min(maxProgress, progressRef.current + SPEED_CELLS_PER_SEC * dt)
-      }
-      const progress = progressRef.current
-
-      // Avatar world position + heading.
-      let ax: number
-      let ay: number
-      let heading: number
-      if (route && route.cells.length > 1) {
-        const i = Math.min(Math.floor(progress), route.cells.length - 2)
-        const frac = progress - i
-        const a = route.cells[i]
-        const b = route.cells[i + 1]
-        ax = lerp(a.x, b.x, frac) + 0.5
-        ay = lerp(a.y, b.y, frac) + 0.5
-        heading = Math.atan2(b.y - a.y, b.x - a.x)
-      } else {
-        ax = p.userCell.x + 0.5
-        ay = p.userCell.y + 0.5
-        heading = -Math.PI / 2
-      }
-
-      // Emit step changes + arrival.
-      if (route && p.onProgress) {
-        const starts = segmentStarts(route.cells)
-        let step = 0
-        for (let k = 0; k < starts.length; k++) if (progress >= starts[k]) step = k
-        if (progress >= maxProgress) step = route.steps.length - 1
-        if (step !== lastStepRef.current) {
-          lastStepRef.current = step
-          const remaining = Math.round((maxProgress - progress) * METERS_PER_CELL)
-          p.onProgress(step, remaining)
-        }
-      }
-      if (route && p.playing && progress >= maxProgress && !arrivedRef.current) {
-        arrivedRef.current = true
-        p.onArrive?.()
-      }
-
-      render(ctx, w, h, p, ax, ay, heading, progress, now)
+      const pose = p.poseRef.current
+      const progress = p.route ? projectOntoRoute(p.route, pose.x, pose.y).index : 0
+      render(ctx, rect.width, rect.height, p, pose, progress, now)
       raf = requestAnimationFrame(frame)
     }
     raf = requestAnimationFrame(frame)
@@ -142,7 +61,6 @@ export default function StoreCanvas(props: Props) {
     }
   }, [])
 
-  // Click-to-set "you are here" (overview only).
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const p = propsRef.current
     if (p.mode !== 'overview' || !p.onPickCell) return
@@ -175,9 +93,7 @@ function render(
   w: number,
   h: number,
   p: Props,
-  ax: number,
-  ay: number,
-  heading: number,
+  pose: Pose,
   progress: number,
   now: number,
 ) {
@@ -191,8 +107,8 @@ function render(
     const visibleCells = 15
     const s = h / visibleCells
     ctx.translate(w / 2, h * 0.74)
-    ctx.rotate(-Math.PI / 2 - heading) // heading points "up"
-    ctx.translate(-ax * s, -ay * s)
+    ctx.rotate(-Math.PI / 2 - pose.heading) // heading points "up"
+    ctx.translate(-pose.x * s, -pose.y * s)
     ctx.scale(s, s)
   } else {
     const { s, tx, ty } = overviewLayout(w, h, store)
@@ -201,27 +117,26 @@ function render(
   }
 
   drawTiles(ctx, store)
-  drawDepartments(ctx, store, p.mode)
+  drawDepartments(ctx, store)
   drawProductDots(ctx, store)
   if (p.route) drawRoute(ctx, p.route, progress, now)
   if (p.target) drawTargetPin(ctx, p.target, now)
-  drawAvatar(ctx, ax, ay, heading)
+  drawAvatar(ctx, pose.x, pose.y, pose.heading)
 
   ctx.restore()
 
-  if (p.mode === 'navigate') drawCompass(ctx, w, heading)
+  if (p.mode === 'navigate') drawCompass(ctx, w, pose.heading)
 }
 
 function drawTiles(ctx: CanvasRenderingContext2D, store: Store) {
   for (let y = 0; y < store.rows; y++) {
     for (let x = 0; x < store.cols; x++) {
       const kind = store.tiles[y][x]
-      if (kind === 'floor') continue // background already covers floor
+      if (kind === 'floor') continue
       ctx.fillStyle = TILE_COLORS[kind]
       ctx.fillRect(x, y, 1, 1)
     }
   }
-  // Subtle floor grid for a "blueprint" feel.
   ctx.strokeStyle = 'rgba(120,150,210,0.06)'
   ctx.lineWidth = 0.03
   ctx.beginPath()
@@ -236,8 +151,7 @@ function drawTiles(ctx: CanvasRenderingContext2D, store: Store) {
   ctx.stroke()
 }
 
-function drawDepartments(ctx: CanvasRenderingContext2D, store: Store, mode: ViewMode) {
-  // Tint each shelving block with its department color.
+function drawDepartments(ctx: CanvasRenderingContext2D, store: Store) {
   for (const dept of store.departments) {
     ctx.fillStyle = dept.color
     ctx.globalAlpha = 0.18
@@ -252,12 +166,8 @@ function drawDepartments(ctx: CanvasRenderingContext2D, store: Store, mode: View
   ctx.textBaseline = 'middle'
   ctx.font = '0.9px system-ui, sans-serif'
   for (const dept of store.departments) {
-    ctx.save()
-    ctx.translate(dept.center.x, dept.center.y)
-    if (mode === 'navigate') ctx.scale(1, 1) // labels stay readable enough
     ctx.fillStyle = dept.color
-    ctx.fillText(dept.label, 0, 0)
-    ctx.restore()
+    ctx.fillText(dept.label, dept.center.x, dept.center.y)
   }
 }
 
@@ -274,7 +184,6 @@ function drawRoute(ctx: CanvasRenderingContext2D, route: Route, progress: number
   if (route.cells.length < 2) return
   const pts = route.cells.map((c) => ({ x: c.x + 0.5, y: c.y + 0.5 }))
 
-  // Full route: faint base line.
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
   ctx.strokeStyle = 'rgba(56,120,255,0.28)'
@@ -282,10 +191,10 @@ function drawRoute(ctx: CanvasRenderingContext2D, route: Route, progress: number
   trace(ctx, pts)
   ctx.stroke()
 
-  // Remaining route from the avatar onward: bright glowing blue.
   const i = Math.min(Math.floor(progress), pts.length - 1)
   const frac = progress - i
-  const head = i < pts.length - 1 ? { x: lerp(pts[i].x, pts[i + 1].x, frac), y: lerp(pts[i].y, pts[i + 1].y, frac) } : pts[i]
+  const head =
+    i < pts.length - 1 ? { x: lerp(pts[i].x, pts[i + 1].x, frac), y: lerp(pts[i].y, pts[i + 1].y, frac) } : pts[i]
   const remaining = [head, ...pts.slice(i + 1)]
 
   ctx.save()
@@ -296,7 +205,6 @@ function drawRoute(ctx: CanvasRenderingContext2D, route: Route, progress: number
   trace(ctx, remaining)
   ctx.stroke()
 
-  // Animated flow dashes drifting toward the destination.
   ctx.strokeStyle = 'rgba(180,220,255,0.9)'
   ctx.lineWidth = 0.16
   ctx.setLineDash([0.5, 1.0])
@@ -337,13 +245,11 @@ function drawAvatar(ctx: CanvasRenderingContext2D, ax: number, ay: number, headi
   ctx.translate(ax, ay)
   ctx.rotate(heading)
 
-  // Accuracy halo.
   ctx.beginPath()
   ctx.arc(0, 0, 0.9, 0, Math.PI * 2)
   ctx.fillStyle = 'rgba(56,189,248,0.18)'
   ctx.fill()
 
-  // Direction chevron.
   ctx.beginPath()
   ctx.moveTo(0.7, 0)
   ctx.lineTo(-0.45, 0.5)
@@ -359,7 +265,6 @@ function drawAvatar(ctx: CanvasRenderingContext2D, ax: number, ay: number, headi
 }
 
 function drawCompass(ctx: CanvasRenderingContext2D, w: number, heading: number) {
-  // Small north indicator that counter-rotates with the map.
   const cx = w - 36
   const cy = 36
   const angle = -Math.PI / 2 - heading
@@ -386,5 +291,5 @@ function drawCompass(ctx: CanvasRenderingContext2D, w: number, heading: number) 
   ctx.font = '10px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('N', cx + Math.cos(angle - Math.PI / 2) * 0, cy - 12)
+  ctx.fillText('N', cx, cy - 12)
 }
