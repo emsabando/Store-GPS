@@ -33,7 +33,7 @@ indoor-positioning can be plugged in later.
 
 ```bash
 npm install
-npm run dev      # start the dev server (Vite)
+npm run dev      # start the web app on mock data (Vite)
 ```
 
 Then open the printed local URL. Other scripts:
@@ -41,14 +41,67 @@ Then open the printed local URL. Other scripts:
 ```bash
 npm run build    # type-check + production build
 npm run preview  # serve the production build
+npm run server   # start the Kroger API proxy (for live data, see below)
+npm run dev:all  # run web app + proxy together
 ```
+
+## Live store data (Kroger / Fry's / Ralphs / King Soopers…)
+
+The app ships on simulated data by default, but it can run on **live store
+inventory and aisle locations** via the Kroger API — which powers Kroger and all
+its banners (**Fry's**, Ralphs, King Soopers, Smith's, QFC, Harris Teeter, and
+more). Kroger is currently the only major US retailer that publicly exposes both
+**per-store stock level** and **in-aisle product location**.
+
+### One-time setup
+
+1. Create a developer account at <https://developer.kroger.com/> → verify email
+   → **register an application** → copy your `client_id` and `client_secret`.
+2. `cp .env.example .env` and fill in:
+   ```env
+   VITE_DATA_PROVIDER=kroger
+   KROGER_CLIENT_ID=your_client_id
+   KROGER_CLIENT_SECRET=your_client_secret
+   ```
+3. `npm run dev:all` — starts the web app and the proxy together.
+4. In the app, type your **ZIP code** → pick your local store (e.g. your Fry's)
+   → search a product. You'll get its real aisle, side, shelf, price, and stock,
+   then GPS navigation to it.
+
+### Why a proxy?
+
+The Kroger `client_secret` must never reach the browser, and Kroger blocks
+direct cross-origin calls. `server/index.mjs` is a tiny Node/Express proxy that
+holds the secret, performs the OAuth2 token exchange (cached), and exposes a
+small **normalized** API the frontend consumes:
+
+```
+GET /api/stores?zip=85281            -> nearby stores
+GET /api/stores/:locationId          -> one store's name/address
+GET /api/stores/:locationId/products?term=milk
+```
+
+With no credentials set, the proxy returns a clear 503 and the app stays on mock
+data — nothing breaks.
+
+### Honest limitation
+
+Kroger exposes **aisle numbers + stock**, not a geometric floor plan. So for
+live stores the map is a faithful *schematic* (one lane per aisle the search
+returns) — the **aisle number, side, shelf, price, and availability are real**,
+the exact geometry is approximate. That's enough to walk you to the right aisle.
 
 ## How it's built
 
 | Area | File |
 | --- | --- |
 | Domain types | `src/types.ts` |
-| Store layout generator + demo catalogs | `src/data/stores.ts` |
+| Pluggable data-provider interface | `src/data/provider.ts` |
+| Provider selector (`mock` \| `kroger`) | `src/data/index.ts` |
+| Mock provider + demo catalogs | `src/data/mockProvider.ts`, `src/data/stores.ts` |
+| Live Kroger provider | `src/data/krogerProvider.ts` |
+| Kroger API proxy (OAuth + normalize) | `server/index.mjs` |
+| Grid/layout generator | `src/data/layout.ts` |
 | A\* pathfinding over the walkable grid | `src/lib/pathfinding.ts` |
 | Route → distance + turn-by-turn steps | `src/lib/navigation.ts` |
 | Map + third-person navigation (canvas) | `src/components/StoreCanvas.tsx` |
@@ -58,32 +111,32 @@ npm run preview  # serve the production build
 Every store is modeled as a uniform grid of tiles (floor, wall, shelf,
 entrance, checkout). Departments become aisles; each product sits on a shelf
 cell reached from an adjacent walkable cell, which is where navigation routes
-you. Pathfinding, routing, and rendering are all data-driven — none of the UI
-hard-codes a specific store.
+you.
 
-## About the data (and real stores)
+The UI talks only to the **`DataProvider`** interface, so the data source is
+swappable:
 
-The demo ships with **simulated stores and inventory**, including
-representative **Walmart** and **Target** layouts so the experience can be
-tested with familiar names. These are illustrative floor plans — not maps of a
-specific physical location.
+- **`MockProvider`** (`mode: 'catalog'`) — full simulated catalogs known up
+  front, including representative **Walmart** and **Target** layouts.
+- **`KrogerProvider`** (`mode: 'live'`) — discovers stores by ZIP and resolves
+  products per search against the Kroger API (via the proxy), building the map
+  from whatever a search returns.
 
-Making this work for a real store near you requires two things the prototype
-deliberately stubs out:
+Adding another retailer is one new class implementing `DataProvider` — nothing
+in the map, pathfinding, or navigation code changes.
 
-1. **Store data** — that retailer's actual aisle map + live inventory
-   (some chains expose product-location and stock APIs; otherwise it needs a
-   data partnership or in-store mapping).
-2. **Indoor positioning** — real "you are here" tracking from Wi-Fi/BLE
-   beacons, UWB, or camera/AR, since GPS doesn't work reliably indoors.
+## Indoor positioning (the other half of "real")
 
-The code is structured so both can be swapped in: replace the catalog in
-`src/data/stores.ts` (or back it with an API) and feed a live position into the
-`userCell` state instead of the tap-to-place fallback.
+This MVP routes from a **tap-to-place** "you are here." Real indoor positioning
+— Wi-Fi/BLE beacons, UWB, or camera/AR — is the remaining piece for true
+hands-free navigation, since phone GPS doesn't work reliably indoors. It plugs
+in by feeding a live position into the app's `userCell` state instead of the tap
+fallback.
 
 ## Roadmap
 
-- Pluggable data layer for real inventory APIs
+- ✅ Pluggable data layer for real inventory APIs
+- ✅ Live Kroger provider (Kroger / Fry's / Ralphs / King Soopers / …)
 - Indoor positioning adapters (BLE beacons / Wi-Fi RTT / AR)
 - Voice-guided directions
 - Multi-stop shopping lists with optimized routing

@@ -1,26 +1,14 @@
-import type { Cell, Department, Product, Store, TileKind } from '../types'
-
 // ---------------------------------------------------------------------------
-// Store layout generator
+// Mock store catalogs (demo data)
 // ---------------------------------------------------------------------------
 //
-// Every store shares the same skeleton: a walled rectangle with an entrance at
-// the bottom, a checkout strip, and a row of parallel aisles. Each "department"
-// becomes one vertical aisle of shelving. Products are placed at shelf cells,
-// each reachable from the walkable corridor cell beside it.
-//
-// Swapping in real store data later means replacing the catalogs below (or the
-// whole generator) — nothing in the UI hard-codes a specific store.
+// Retailer-agnostic demo catalogs. The mock DataProvider turns these into
+// renderable grid stores via src/data/layout.ts. Real data arrives through a
+// different DataProvider (see krogerProvider.ts) — this file stays demo-only.
 
-const COLS = 46
-const ROWS = 34
+import { PALETTE } from './layout'
 
-const BLOCK_TOP = 6
-const BLOCK_BOTTOM = ROWS - 6 // 28
-const FIRST_X = 4
-const PITCH = 5 // 2 cells of shelf + 3 cells of corridor
-
-interface ProductDef {
+export interface ProductDef {
   name: string
   brand: string
   price: number
@@ -28,120 +16,20 @@ interface ProductDef {
   emoji: string
 }
 
-interface DeptDef {
+export interface DeptDef {
   label: string
   color: string
   products: ProductDef[]
 }
 
-interface StoreDef {
+export interface StoreDef {
   id: string
   name: string
   address: string
   depts: DeptDef[]
 }
 
-function blankGrid(): TileKind[][] {
-  const tiles: TileKind[][] = []
-  for (let y = 0; y < ROWS; y++) {
-    const row: TileKind[] = []
-    for (let x = 0; x < COLS; x++) {
-      const isPerimeter = x === 0 || y === 0 || x === COLS - 1 || y === ROWS - 1
-      row.push(isPerimeter ? 'wall' : 'floor')
-    }
-    tiles.push(row)
-  }
-  return tiles
-}
-
-/** Walkable cell-pairs flanking one aisle block, top to bottom, alternating faces. */
-function aisleSlots(bx: number): { shelf: Cell; access: Cell }[] {
-  const slots: { shelf: Cell; access: Cell }[] = []
-  for (let y = BLOCK_TOP + 1; y < BLOCK_BOTTOM; y += 2) {
-    slots.push({ shelf: { x: bx, y }, access: { x: bx - 1, y } }) // left face
-    slots.push({ shelf: { x: bx + 1, y }, access: { x: bx + 2, y } }) // right face
-  }
-  return slots
-}
-
-function buildStore(def: StoreDef): Store {
-  if (def.depts.length > 8) {
-    throw new Error(`Store ${def.id} has too many departments for the grid`)
-  }
-
-  const tiles = blankGrid()
-  const entranceX = Math.floor(COLS / 2)
-
-  // Entrance: a two-cell gap in the bottom wall.
-  tiles[ROWS - 1][entranceX - 1] = 'entrance'
-  tiles[ROWS - 1][entranceX] = 'entrance'
-  const entrance: Cell = { x: entranceX, y: ROWS - 2 }
-
-  // Checkout strip just inside the entrance.
-  const checkoutY = ROWS - 3
-  for (let x = entranceX - 3; x <= entranceX + 3; x++) {
-    tiles[checkoutY][x] = 'checkout'
-  }
-  const checkout: Cell = { x: entranceX, y: checkoutY }
-
-  const departments: Department[] = []
-  const products: Product[] = []
-
-  def.depts.forEach((dept, i) => {
-    const bx = FIRST_X + i * PITCH
-
-    // Lay down the shelving block.
-    for (let y = BLOCK_TOP; y <= BLOCK_BOTTOM; y++) {
-      tiles[y][bx] = 'shelf'
-      tiles[y][bx + 1] = 'shelf'
-    }
-
-    departments.push({
-      id: `${def.id}-dept-${i}`,
-      label: dept.label,
-      center: { x: bx + 0.5, y: BLOCK_TOP - 2 },
-      color: dept.color,
-    })
-
-    const slots = aisleSlots(bx)
-    dept.products.forEach((p, j) => {
-      const slot = slots[j % slots.length]
-      products.push({
-        id: `${def.id}-p-${i}-${j}`,
-        name: p.name,
-        brand: p.brand,
-        category: dept.label,
-        aisle: dept.label,
-        price: p.price,
-        stock: p.stock,
-        access: slot.access,
-        shelf: slot.shelf,
-        emoji: p.emoji,
-      })
-    })
-  })
-
-  return {
-    id: def.id,
-    name: def.name,
-    address: def.address,
-    cols: COLS,
-    rows: ROWS,
-    tiles,
-    entrance,
-    checkout,
-    departments,
-    products,
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Demo catalogs
-// ---------------------------------------------------------------------------
-
-const PALETTE = ['#22c55e', '#f59e0b', '#38bdf8', '#a78bfa', '#fb7185', '#34d399', '#facc15', '#60a5fa']
-
-const STORE_DEFS: StoreDef[] = [
+export const MOCK_CATALOG: StoreDef[] = [
   {
     id: 'freshmart',
     name: 'FreshMart Supermarket',
@@ -528,9 +416,3 @@ const STORE_DEFS: StoreDef[] = [
     ],
   },
 ]
-
-export const STORES: Store[] = STORE_DEFS.map(buildStore)
-
-export function getStore(id: string): Store | undefined {
-  return STORES.find((s) => s.id === id)
-}

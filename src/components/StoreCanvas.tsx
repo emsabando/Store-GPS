@@ -265,7 +265,7 @@ function drawProductDots(ctx: CanvasRenderingContext2D, store: Store) {
   for (const product of store.products) {
     ctx.beginPath()
     ctx.arc(product.shelf.x + 0.5, product.shelf.y + 0.5, 0.16, 0, Math.PI * 2)
-    ctx.fillStyle = product.stock > 0 ? 'rgba(186,210,255,0.55)' : 'rgba(120,130,150,0.4)'
+    ctx.fillStyle = product.availability === 'out' ? 'rgba(120,130,150,0.4)' : 'rgba(186,210,255,0.55)'
     ctx.fill()
   }
 }

@@ -18,6 +18,14 @@ export type TileKind =
   | 'entrance' // walkable, the "you are here" start
   | 'checkout' // walkable, register area
 
+/**
+ * Availability normalized across data sources. Count-based sources (the mock
+ * catalog) derive this from a number; level-based sources (Kroger) map their
+ * HIGH/LOW/TEMPORARILY_OUT_OF_STOCK directly. 'unknown' means the source had
+ * no inventory signal for this item/location.
+ */
+export type Availability = 'in' | 'low' | 'out' | 'unknown'
+
 /** Inventory + merchandising info for one product in one store. */
 export interface Product {
   id: string
@@ -26,9 +34,13 @@ export interface Product {
   category: string
   /** Human-facing aisle label, e.g. "Aisle 7" or "Produce". */
   aisle: string
-  price: number
-  /** On-hand units. 0 means out of stock. */
+  /** Null when the source doesn't expose a price for this location. */
+  price: number | null
+  /** On-hand units when known, else -1 (level-only sources like Kroger). */
   stock: number
+  availability: Availability
+  /** Rich physical location string when available, e.g. "Aisle 12 · Left · Shelf 4". */
+  locationDetail?: string
   /** Walkable cell directly in front of the product's shelf. */
   access: Cell
   /** The shelf cell the product sits on (for drawing a marker). */

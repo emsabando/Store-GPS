@@ -1,37 +1,34 @@
-import { useMemo } from 'react'
-import type { Product, Store } from '../types'
+import type { Availability, Product } from '../types'
 
 interface Props {
-  store: Store
+  results: Product[]
   query: string
   onQuery: (q: string) => void
   selectedId: string | null
   onSelect: (product: Product) => void
+  loading?: boolean
+  placeholder?: string
+  emptyHint?: string
 }
 
-function score(product: Product, q: string): number {
-  const hay = `${product.name} ${product.brand} ${product.category}`.toLowerCase()
-  if (!q) return 0
-  if (hay.includes(q)) {
-    // Prefer matches at a word boundary / start of name.
-    if (product.name.toLowerCase().startsWith(q)) return 3
-    if (product.name.toLowerCase().includes(q)) return 2
-    return 1
-  }
-  return -1
+function stockBadge(p: Product): { text: string; cls: string } {
+  const a: Availability = p.availability
+  if (a === 'out') return { text: 'Out of stock', cls: 'out' }
+  if (a === 'unknown') return { text: 'Check store', cls: 'unknown' }
+  if (a === 'low') return { text: p.stock >= 0 ? `Only ${p.stock} left` : 'Low stock', cls: 'low' }
+  return { text: p.stock >= 0 ? 'In stock' : 'In stock', cls: 'in' }
 }
 
-export default function SearchPanel({ store, query, onQuery, selectedId, onSelect }: Props) {
-  const q = query.trim().toLowerCase()
-
-  const results = useMemo(() => {
-    const list = store.products
-      .map((p) => ({ p, s: score(p, q) }))
-      .filter((r) => r.s >= 0)
-      .sort((a, b) => b.s - a.s || a.p.name.localeCompare(b.p.name))
-    return q ? list.map((r) => r.p) : store.products
-  }, [store, q])
-
+export default function SearchPanel({
+  results,
+  query,
+  onQuery,
+  selectedId,
+  onSelect,
+  loading,
+  placeholder,
+  emptyHint,
+}: Props) {
   return (
     <div className="search-panel">
       <div className="search-box">
@@ -42,10 +39,11 @@ export default function SearchPanel({ store, query, onQuery, selectedId, onSelec
           autoFocus
           value={query}
           onChange={(e) => onQuery(e.target.value)}
-          placeholder={`Search ${store.products.length} products…`}
+          placeholder={placeholder ?? 'Search products…'}
           aria-label="Search products"
         />
-        {query && (
+        {loading && <span className="search-spinner" aria-hidden />}
+        {query && !loading && (
           <button className="clear-btn" onClick={() => onQuery('')} aria-label="Clear search">
             ✕
           </button>
@@ -53,10 +51,11 @@ export default function SearchPanel({ store, query, onQuery, selectedId, onSelec
       </div>
 
       <div className="results">
-        {results.length === 0 && <p className="empty">No products match “{query}”.</p>}
+        {results.length === 0 && (
+          <p className="empty">{query ? `No products match “${query}”.` : emptyHint ?? 'Start typing to search.'}</p>
+        )}
         {results.map((p) => {
-          const inStock = p.stock > 0
-          const low = inStock && p.stock <= 10
+          const badge = stockBadge(p)
           return (
             <button
               key={p.id}
@@ -69,14 +68,12 @@ export default function SearchPanel({ store, query, onQuery, selectedId, onSelec
               <span className="result-main">
                 <span className="result-name">{p.name}</span>
                 <span className="result-sub">
-                  {p.brand} · {p.aisle}
+                  {[p.brand, p.locationDetail ?? p.aisle].filter(Boolean).join(' · ')}
                 </span>
               </span>
               <span className="result-meta">
-                <span className="result-price">${p.price.toFixed(2)}</span>
-                <span className={`stock ${inStock ? (low ? 'low' : 'in') : 'out'}`}>
-                  {inStock ? (low ? `Only ${p.stock} left` : `In stock`) : 'Out of stock'}
-                </span>
+                <span className="result-price">{p.price != null ? `$${p.price.toFixed(2)}` : '—'}</span>
+                <span className={`stock ${badge.cls}`}>{badge.text}</span>
               </span>
             </button>
           )
