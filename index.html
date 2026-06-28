@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>Store-GPS — Find any product in seconds</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-pin" aria-hidden="true">📍</span>
+      <h1>Store-GPS</h1>
+    </div>
+    <p class="tagline">Find any product in the store — in seconds.</p>
+  </header>
+
+  <main class="app-main">
+    <!-- Search -->
+    <section class="search-card" aria-label="Product search">
+      <label class="search-label" for="search">What are you looking for?</label>
+      <div class="search-box">
+        <span class="search-icon" aria-hidden="true">🔎</span>
+        <input
+          id="search"
+          type="search"
+          autocomplete="off"
+          placeholder="Try 'milk', 'shampoo', 'bananas'…"
+          aria-label="Search for a product"
+        />
+        <button id="clear-btn" class="clear-btn" aria-label="Clear search" hidden>✕</button>
+      </div>
+
+      <div class="chips" id="chips" aria-label="Popular searches">
+        <span class="chips-label">Popular:</span>
+        <button class="chip" data-term="Milk">🥛 Milk</button>
+        <button class="chip" data-term="Bananas">🍌 Bananas</button>
+        <button class="chip" data-term="Bread">🍞 Bread</button>
+        <button class="chip" data-term="Shampoo">🧴 Shampoo</button>
+        <button class="chip" data-term="Coffee">☕ Coffee</button>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="results" class="results" aria-live="polite"></section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Store-GPS demo · works on any phone or kiosk</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
