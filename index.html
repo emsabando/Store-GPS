@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0e5c4a" />
+  <title>Monica's Debt Master Plan</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💸</text></svg>" />
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">M</span>
+      <div class="brand-text">
+        <strong>Debt Master Plan</strong>
+        <span class="brand-sub">Monica · snowball payoff</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-theme" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+      <button id="btn-menu" class="icon-btn" title="Data &amp; settings" aria-label="Menu">⋯</button>
+    </div>
+  </header>
+
+  <!-- Main content, rendered per-tab by app.js -->
+  <main id="view" class="view"></main>
+
+  <!-- Bottom navigation (mobile-first, like the reference apps) -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab" data-tab="dashboard"><span class="tab-ico">◎</span><span>Home</span></button>
+    <button class="tab" data-tab="debts"><span class="tab-ico">▤</span><span>Debts</span></button>
+    <button class="tab tab-fab" data-tab="add"><span class="fab">＋</span></button>
+    <button class="tab" data-tab="budget"><span class="tab-ico">◧</span><span>Budget</span></button>
+    <button class="tab" data-tab="progress"><span class="tab-ico">◪</span><span>Progress</span></button>
+  </nav>
+
+  <!-- Modal host -->
+  <div id="modal-root"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/calc.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
