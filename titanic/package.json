@@ -1,0 +1,25 @@
+{
+  "name": "titanic-free-roam",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A Night to Remember Forever — a free-roam 3D recreation of RMS Titanic (1912), a parody homage to the 1997 film, built with Three.js for 4K.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "check": "node scripts/check-modules.mjs",
+    "smoke": "node tests/smoke.mjs",
+    "fetch-textures": "node scripts/fetch-textures.mjs"
+  },
+  "dependencies": {
+    "n8ao": "2.0.1",
+    "postprocessing": "6.39.6",
+    "three": "0.187.0",
+    "three-mesh-bvh": "0.9.18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "vite": "8.3.5"
+  }
+}
