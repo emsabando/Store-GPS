@@ -108,6 +108,8 @@ function buildStaircase(spec, m, ctx, gs, { clockBetween = null, cherubAt = null
       if (sc.userData.light) lights.push(sc.userData.light);
     }
     locations.push({ id: `${key}_gs_${id}`, name: `Grand Staircase, ${id} deck`, deck: id, x: xC - halfLen - 1.5, y, z: 0, yaw: 0 });
+    // the spec's own landmark for this landing sits inside the well (over the flights): override it with the safe spot
+    if (key === 'forward') locations.push({ id: `grand_staircase_${id}`, name: `Grand Staircase, ${id} deck`, deck: id, x: xC - halfLen - 1.5, y, z: 0, yaw: 0 });
   }
 
   // intervals: upper deck U, lower deck L

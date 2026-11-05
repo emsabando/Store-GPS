@@ -47,7 +47,7 @@ function hasAnimatedParts(obj) {
  * so dynamic props (deck chairs), lifeboats, davits and door leaves become 1–3 draw calls each.
  * Interactable tags found on the merged meshes are carried over to the merged result.
  */
-function subBake(obj, { skip = () => false } = {}) {
+function subBake(obj, { skip = () => false, variant = null } = {}) {
   obj.updateMatrixWorld(true);
   const invObj = new THREE.Matrix4().copy(obj.matrixWorld).invert();
   const buckets = new Map();
@@ -65,7 +65,8 @@ function subBake(obj, { skip = () => false } = {}) {
     if (!mats[0]) return;
     const collide = !!o.userData.collide, invisible = !o.visible;
     if (o.userData.interactable && !interactable) interactable = o.userData.interactable;
-    const push = (m, g) => {
+    const push = (m0, g) => {
+      const m = variant ? variant(m0) : m0;
       const key = `${invisible ? 'c' : m.uuid}|${collide ? 1 : 0}`;
       let b = buckets.get(key);
       if (!b) { b = { material: invisible ? null : m, geoms: [], collide, invisible, castShadow: false, receiveShadow: false }; buckets.set(key, b); }
@@ -114,7 +115,15 @@ function subBake(obj, { skip = () => false } = {}) {
  * @param {import('./Ship.js').Ship} ship
  * @param {{ log?: (s: string) => void }} [opts]
  */
-export function bakeShip(ship, { log = () => {} } = {}) {
+/** True when the object or any descendant was built by an interior builder. */
+function isInteriorObject(obj) {
+  let found = false;
+  obj.traverse((c) => { if (!found && c.userData && c.userData.interior) found = true; });
+  return found;
+}
+
+export function bakeShip(ship, { log = () => {}, materials = ship.materials || null } = {}) {
+  const variantOf = materials && typeof materials.interiorVariant === 'function' ? (m) => materials.interiorVariant(m) : null;
   const root = ship.group;
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
@@ -144,8 +153,9 @@ export function bakeShip(ship, { log = () => {} } = {}) {
   root.add(frameHolder);
   root.traverse((o) => {
     if (!o.userData || !o.userData.door) return;
+    const doorInterior = isInteriorObject(o);
     for (const c of [...o.children]) {
-      if (c.isMesh && !c.userData.interactable) { c.userData.part = o.userData.part || c.userData.part; frameHolder.attach(c); }
+      if (c.isMesh && !c.userData.interactable) { c.userData.part = o.userData.part || c.userData.part; if (doorInterior) c.userData.interior = true; frameHolder.attach(c); }
     }
   });
   root.updateMatrixWorld(true);
@@ -161,7 +171,10 @@ export function bakeShip(ship, { log = () => {} } = {}) {
     let p = o.parent, inKept = false;
     while (p && p !== root) { if (keep(p)) { inKept = true; break; } p = p.parent; }
     if (inKept) return;
-    if (keep(o)) { kept.push(o); return; }
+    if (keep(o)) {
+      if (!o.userData.bakeOrigin) { const chain = []; let q = o.parent; while (q && q !== root && chain.length < 4) { chain.push(q.name || q.type); q = q.parent; } o.userData.bakeOrigin = chain.join('<'); }
+      kept.push(o); return;
+    }
     if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
     if (!o.visible && !o.userData.collide) return;                       // invisible, non-colliding: drop
     const mw = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
@@ -203,7 +216,8 @@ export function bakeShip(ship, { log = () => {} } = {}) {
       }
     } else push(mat0, slim(o, mw));
     baked++;
-    function push(m, g) {
+    function push(m0, g) {
+      const m = interior && variantOf ? variantOf(m0) : m0;
       const key = `${invisible ? 'c' : m.uuid}|${collide ? 1 : 0}|${side}|${slab}|${interior ? 'i' + band : 'e'}`;
       let b = buckets.get(key);
       if (!b) { b = { material: invisible ? null : m, geoms: [], collide, invisible, castShadow: false, emissive: false, cx, cy, side, interior }; buckets.set(key, b); }
@@ -222,14 +236,16 @@ export function bakeShip(ship, { log = () => {} } = {}) {
   let subBaked = 0;
   for (const { o } of keptWithMatrix) {
     if (o.isMesh || o.isLight || o.isLine || o.isPoints || o.isInstancedMesh || o.isSprite) continue;
+    const variant = variantOf && isInteriorObject(o) ? variantOf : null;
     if (o.userData.door) {
       const pivots = o.children.filter((c) => !c.isMesh && c.children.length);
-      subBaked += subBake(o, { skip: (c) => pivots.includes(c) });
-      for (const pv of pivots) subBaked += subBake(pv);
+      subBaked += subBake(o, { skip: (c) => pivots.includes(c), variant });
+      for (const pv of pivots) subBaked += subBake(pv, { variant });
+      if (variant) o.traverse((c) => { if (c.isInstancedMesh && c.material && !Array.isArray(c.material)) c.material = variant(c.material); });
       continue;
     }
-    if (hasAnimatedParts(o)) continue;
-    subBaked += subBake(o);
+    if (hasAnimatedParts(o)) { if (variant) o.traverse((c) => { if ((c.isMesh || c.isInstancedMesh) && c.material && !Array.isArray(c.material)) c.material = variant(c.material); }); continue; }
+    subBaked += subBake(o, { variant });
   }
   // ---- instanced meshes sharing geometry + material (+ break-up side) merge into one ----
   const instGroups = new Map();
@@ -248,14 +264,19 @@ export function bakeShip(ship, { log = () => {} } = {}) {
     g.items.push({ o, rel }); g.count += o.count; if (o.instanceColor) g.hasColor = true;
   }
   let instMerged = 0;
+  const badInstances = {};
   const _im = new THREE.Matrix4(), _ic = new THREE.Color();
+  if (variantOf) for (const g of instGroups.values()) { if (g.items.every(({ o }) => o.userData.interior) && !Array.isArray(g.material)) g.material = variantOf(g.material); }
   for (const g of instGroups.values()) {
     if (g.items.length < 2) continue;
     const merged = new THREE.InstancedMesh(g.geometry, g.material, g.count);
     let k = 0;
     for (const { o, rel } of g.items) {
       for (let i = 0; i < o.count; i++) {
-        o.getMatrixAt(i, _im); _im.premultiply(rel); merged.setMatrixAt(k, _im);
+        o.getMatrixAt(i, _im); _im.premultiply(rel);
+        // a NaN matrix (degenerate builder maths) would poison raycasts and bounds: drop it and report the source
+        if (!_im.elements.every(Number.isFinite)) { const src = (o.name || '~') + '@' + (o.userData.bakeOrigin || '~') + (rel.elements.every(Number.isFinite) ? ' (bad instance)' : ' (bad transform)'); badInstances[src] = (badInstances[src] || 0) + 1; continue; }
+        merged.setMatrixAt(k, _im);
         if (g.hasColor) { if (o.instanceColor) o.getColorAt(i, _ic); else _ic.setRGB(1, 1, 1); merged.setColorAt(k, _ic); }
         k++;
       }
@@ -317,5 +338,6 @@ export function bakeShip(ship, { log = () => {} } = {}) {
     root.traverse((o) => { if (o.isMesh && o.userData.emissiveLamp) ship.lampMeshes.push(o); });
   }
   log(`bake: ${baked} meshes → ${meshes} (${Math.round(tris / 1000)}k tris); ${kept.length} kept objects collapsed to ${subBaked} meshes; ${instMerged} instanced meshes merged away`);
+  if (Object.keys(badInstances).length) console.warn('[ship] bake dropped NaN instances:', badInstances);
   return { baked, meshes, kept: kept.length };
 }

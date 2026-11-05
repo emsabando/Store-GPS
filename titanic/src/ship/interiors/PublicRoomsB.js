@@ -64,7 +64,8 @@ export function buildPublicRoomsB(spec, m, ctx) {
     const g = shell.group;
     for (const s of [-1, 1]) for (const dx of [-1.2, 1.2]) { const d = makeDoor(m, { w: 1.2, h: 2.2, style: 'steel', id: `gangway_D_${s > 0 ? 'stbd' : 'port'}_${dx > 0 ? 'a' : 'f'}`, double: false }); d.position.set((r.x0 + r.x1) / 2 + dx, 0, s > 0 ? r.z1 - 0.1 : r.z0 + 0.1); d.rotation.y = s > 0 ? Math.PI : 0; g.add(d); }
     for (let i = 0; i < 3; i++) { const b = makeBench(m, { length: 1.8, style: 'deck' }); b.position.set(r.x0 + 2 + i * 2.5, 0, 0); b.rotation.y = Math.PI / 2; g.add(b); }
-    locations.push(roomLocation(r, 0, Math.PI / 2)); flood(r); add(shell);
+    // the lifts stand at the room centre: the landmark is in the starboard half of the lobby, facing port across it
+    locations.push({ ...roomLocation(r, -1.0, Math.PI / 2), z: 7.5 }); flood(r); add(shell);
   }
 
   // ---------------- Second-Class Dining Saloon (D deck): oak, long tables, red leather swivel chairs, piano

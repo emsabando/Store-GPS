@@ -197,7 +197,7 @@ deckhouse('boat', 'bh_bridge', 'Navigating bridge (open, roofed)', 190, 203, -14
 deckhouse('boat', 'bh_officers', "Wheelhouse and officers' quarters", 203, 305, -7.2, 7.2, 2.5,
           roof=['collapsible A (stbd)', 'collapsible B (port)', 'Marconi aerial lead-in', 'skylights'])
 deckhouse('boat', 'bh_funnel1', 'Funnel 1 casing (fan rooms)', 228, 266, -4.6, 4.6, 2.8)
-deckhouse('boat', 'bh_entrance_fwd', 'First Class Entrance / Grand Staircase dome house', 305, 339, -8.7, 8.7, 2.6,
+deckhouse('boat', 'bh_entrance_fwd', 'First Class Entrance / Grand Staircase dome house', 296, 339, -8.7, 8.7, 2.6,
           roof=['glass and wrought-iron dome (oval)'])
 deckhouse('boat', 'bh_gym', 'Gymnasium', 339, 383, 4.6, 10.1, 2.9,
           windows={'type': 'square', 'pitch': 1.4, 'w': 1.0, 'h': 1.3, 'y': 1.2})
@@ -238,7 +238,7 @@ room('boat', 'gymnasium', 'Gymnasium', 'first', 339, 383, 4.6, 10.1, 2.9, 'White
      {'floor': 'oakPanel', 'walls': 'whiteEnamel', 'ceiling': 'plasterWhite'}, {'floor': '#8B6A3E', 'walls': '#F1EEE6'},
      [{'type': 'gymMachine', 'count': 1, 'layout': 'electric camel'}, {'type': 'gymMachine', 'count': 1, 'layout': 'electric horse'}, {'type': 'gymMachine', 'count': 2, 'layout': 'rowing machines'}, {'type': 'gymMachine', 'count': 2, 'layout': 'cycle racing machines'}, {'type': 'gymMachine', 'count': 1, 'layout': 'punching bag'}],
      {'fixture': 'ceilingGlobe', 'colourK': 2350}, ['illuminated map of the world on the aft wall', '44 ft x 18 ft'], ['spitting_lesson_nearby'])
-room('boat', 'entrance_boat_fwd', 'First Class Entrance (Boat Deck gallery)', 'first', 305, 339, -8.7, 8.7, 4.2, 'Oak panelled gallery under the dome',
+room('boat', 'entrance_boat_fwd', 'First Class Entrance (Boat Deck gallery)', 'first', 296, 339, -8.7, 8.7, 4.2, 'Oak panelled gallery under the dome',
      {'floor': 'linoDining', 'walls': 'oakPanel', 'ceiling': 'glassFrosted'}, None, [], {'fixture': 'chandelier', 'colourK': 2350}, ['stairwell gallery 56 x 33 ft'])
 room('boat', 'entrance_boat_2nd', 'Second Class Entrance (Boat Deck)', 'second', 644, 670, -4.6, 4.6, 2.6, 'Oak and white, stair and lift to F deck',
      {'floor': 'linoCorridor', 'walls': 'oakPanel'})

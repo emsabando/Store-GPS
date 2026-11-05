@@ -341,7 +341,7 @@ export function makeRailing(m, { length = 2, height = 1.05, balusterPitch = 0.4,
     g.add(box(m, length, 0.08, 0.1, capMat, { y: height - 0.04 }));
     // wrought-iron panels with gilt swags between balusters (thin decorative panels every second bay)
     const panelGeom = cachedGeometry('box:swag', () => new THREE.BoxGeometry(balusterPitch * 0.8, 0.26, 0.015));
-    const swags = new THREE.InstancedMesh(panelGeom, m.get('ormolu'), Math.max(1, Math.floor((n - 1) / 2)));
+    const swags = new THREE.InstancedMesh(panelGeom, m.get('ormolu'), Math.max(1, Math.ceil((n - 1) / 2)));   // one per even bay: ceil, or the last write falls off the buffer (NaN instances)
     let k = 0;
     for (let i = 0; i + 1 < n; i += 2) { mm.makeTranslation(-length / 2 + ((i + 0.5) / (n - 1)) * length, height * 0.55, 0); swags.setMatrixAt(k++, mm); }
     swags.count = k; swags.instanceMatrix.needsUpdate = true; g.add(swags);

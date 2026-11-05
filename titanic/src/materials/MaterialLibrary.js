@@ -301,6 +301,28 @@ export class MaterialLibrary {
     }
   }
 
+  /**
+   * A copy of `mat` lit by the warm interior environment, for exterior-class materials (brass,
+   * wrought iron, steel…) used indoors: without it metals reflect the sky and read blue-grey.
+   * Cached per source material; interior materials and existing variants are returned as-is.
+   */
+  interiorVariant(mat) {
+    if (!mat || !mat.isMaterial) return mat;
+    if (mat.userData && mat.userData.interiorVariantOf) return mat;
+    if (INTERIOR_NAMES.has(mat.name) || !('envMap' in mat)) return mat;
+    this._interiorVariants ||= new Map();
+    let v = this._interiorVariants.get(mat.uuid);
+    if (!v) {
+      v = mat.clone();
+      v.userData = { ...mat.userData, interiorVariantOf: mat.uuid };
+      v.envMap = this.interiorEnv || null;
+      v.envMapIntensity = this.interiorEnv ? INTERIOR_ENV_INTENSITY : 0.3;
+      (this.interiorMaterials ||= []).push(v);
+      this._interiorVariants.set(mat.uuid, v);
+    }
+    return v;
+  }
+
   /** A private copy of a material (textures are shared) with property overrides applied. */
   clone(name, overrides = {}) {
     const m = this.get(name).clone();
