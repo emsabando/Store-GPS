@@ -74,6 +74,25 @@ table and an HTML front end over Pixel Streaming.
 
 ## Install
 
+**Windows, one command.** Close Unreal Editor, then run this from `ArchVizMasterTemplate\Tools`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-ArchVizKit.ps1 -ProjectPath "C:\path\to\YourProject" -AddCppModule -DryRun
+```
+
+`-DryRun` shows every change without making it; run again without it to apply. The script:
+- copies the plugin and enables it in the `.uproject`
+- adds an empty C++ module if the project is Blueprint-only (`-AddCppModule` does nothing if a
+  `Source` folder already exists)
+- adds the packaging and custom-depth config
+- copies the data and docs to `ArchVizData\`
+
+Everything it changes is backed up to `Saved\ArchVizKitBackup\` first. Add `-SetDefaultGameMode`
+to make `ArchVizGameMode` the project-wide default; otherwise set it per level in World Settings.
+Then continue from step 3 below.
+
+**By hand:**
+
 1. Copy `Plugins/ArchVizKit` into `<YourProject>/Plugins/`. The project needs to be C++. If it's
    Blueprint-only, add any C++ class once (Tools > New C++ Class), then build from your IDE.
 2. Enable **ArchViz Kit** in Edit > Plugins and restart.
@@ -117,6 +136,7 @@ ArchVizMasterTemplate/
   Data/UnitTypes.csv             4 layouts with plan viewpoints
   Data/inventory_update.example.json   payload shape for live CRM sync
   Tools/validate_inventory.py    pre-import checker for client spreadsheets
+  Tools/Install-ArchVizKit.ps1   installs the kit into an existing UE5 project (Windows)
   docs/PROJECT_SETUP.md          per-project setup, scene conventions, materials, packaging
   docs/UI_KIT.md                 screens, widget tree, theme tokens, UX rules from the references
   docs/BRIDGE_PROTOCOL.md        JSON commands and messages (Pixel Streaming / web / tablet)
