@@ -163,7 +163,7 @@ async function main() {
       try { const blob = await engine.screenshot(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `titanic-plate-${Date.now()}.png`; a.click(); bus.emit('notify', { text: 'Plate exposed.', kind: 'log' }); bus.emit('audio:play', { id: 'ui_click' }); } catch (err) { console.warn(err); }
     }
   });
-  bus.on('ui:teleport', ({ locationId }) => { const l = ship.locations.get(locationId); if (l) player.teleportLocal(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0); });
+  bus.on('ui:teleport', ({ locationId }) => { const l = ship.locations.get(locationId); if (!l) return; player.teleportLocal(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0); if (world.setInside) { world.setInside(!!player.inside); world.snapInside?.(); } });
   bus.on('ui:photoMode', ({ on }) => { setMode(on ? 'photo' : 'playing'); player.setMode(on ? 'free' : settings.get('viewMode')); });
   bus.on('input:escape', () => { if (state.mode === 'playing') setMode('paused'); });
   bus.on('input:pointerlockchange', ({ locked }) => { if (!locked && state.mode === 'playing' && !params.get('debug')) setMode('paused'); });

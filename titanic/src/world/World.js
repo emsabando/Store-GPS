@@ -102,6 +102,8 @@ export class World {
 
   /** Camera under cover (player.inside): the sky hemisphere and sun fade so rooms read lamp-lit. */
   setInside(flag) { this._insideTarget = flag ? 1 : 0; }
+  /** Settle the indoor/outdoor lighting at once (teleports); walking through a door keeps the ease. */
+  snapInside() { this._insideK = this._insideTarget ?? 0; this._state.insideK = this._insideK; }
 
   update(dt, cameraPos) {
     this._time += dt;
@@ -118,7 +120,9 @@ export class World {
     const el = s.sunElevationDeg;
     const dayI = THREE.MathUtils.smoothstep(el, -3, 10);
     const pal = s.palette;
-    sun.intensity = 2.6 * dayI * (pal.sunIntensity ?? 1) * (1 - 0.6 * this._insideK);
+    // Under cover the sun is (almost) off: the shadow pass is skipped indoors, so any sunlight left
+    // would leak through the hull onto decks and bulkheads.
+    sun.intensity = 2.6 * dayI * (pal.sunIntensity ?? 1) * (1 - 0.92 * this._insideK);
     if (pal.sun) sun.color.copy(pal.sun);
     else if (pal.glow) { sun.color.copy(pal.glow).lerp(SUN_WHITE, THREE.MathUtils.smoothstep(el, 2, 18)); }
     const cam = cameraPos || this.engine.camera.position;

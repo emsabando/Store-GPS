@@ -1,6 +1,8 @@
 // Debug API for the smoke test and manual testing (ARCHITECTURE.md §9). Owned by the integrator.
 export function installDebugAPI(game) {
   const { engine, ship, player, world, quest, npcs, sinking, clock } = game;
+  // after a teleport the indoor/outdoor lighting settles at once instead of easing over a second
+  const settle = () => { if (player.refreshInside) player.refreshInside(); if (world && world.setInside) { world.setInside(!!player.inside); if (world.snapInside) world.snapInside(); } };
   const api = {
     engine, ship, player, world, quest, npcs, sinking, clock, game,
     listLocations: () => [...ship.locations.keys()],
@@ -12,6 +14,7 @@ export function installDebugAPI(game) {
         if (l.mode === 'free' && typeof player.teleportWorld === 'function') player.teleportWorld(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0);   // exterior spots stay put while the ship sinks
         else player.teleportLocal(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0);
         if (l.pitch !== undefined) player.pitch = l.pitch;
+        settle();
         return l;
       }
       const { x, y, z, yaw = 0, pitch = 0, mode } = target;
@@ -19,6 +22,7 @@ export function installDebugAPI(game) {
       if (mode === 'free' && typeof player.teleportWorld === 'function') player.teleportWorld(x, y, z, yaw);
       else player.teleportLocal(x, y, z, yaw);
       player.pitch = pitch;
+      settle();
       return target;
     },
     setTime: (hhmm) => clock.set(hhmm),

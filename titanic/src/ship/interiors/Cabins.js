@@ -181,13 +181,25 @@ export function buildCabinsAndCorridors(spec, m, ctx) {
     for (const side of ['port', 'stbd']) {
       const z = side === 'port' ? c.z0 : c.z1;
       const touchesSide = (o) => (side === 'port' ? (o.z1 >= c.z0 - 0.6 && o.z0 < c.z0) : (o.z0 <= c.z1 + 0.6 && o.z1 > c.z1)) && o.x1 > c.x0 && o.x0 < c.x1;
-      // already handled: cabin blocks on this side, rooms that build their own walls and doors, cross alleyways
+      // already walled: cabin blocks on this side (their own doors) and cross alleyways (left open).
+      // Every other adjoining room — built as a shell or not built at all — gets a wall with a
+      // doorway at the room's centre (and quarter points for long rooms), so nothing opens on a void.
       const taken = [...cover[side]];
-      for (const r of (d && d.rooms) || []) if (!blockRoomIds.has(r.id) && Number.isFinite(r.z0) && touchesSide(r)) taken.push([r.x0, r.x1]);
+      const doors = [];
+      for (const r of (d && d.rooms) || []) {
+        if (blockRoomIds.has(r.id) || !Number.isFinite(r.z0) || !touchesSide(r)) continue;
+        const xs = [(r.x0 + r.x1) / 2];
+        if (r.x1 - r.x0 > 14) xs.push(r.x0 + (r.x1 - r.x0) * 0.25, r.x0 + (r.x1 - r.x0) * 0.75);
+        for (const x of xs) if (x > c.x0 + 0.8 && x < c.x1 - 0.8) doors.push(x);
+      }
       for (const o of (d && d.corridors) || []) if (o.id !== c.id && touchesSide(o)) taken.push([o.x0 - 0.3, o.x1 + 0.3]);
       taken.sort((a, b) => a[0] - b[0]);
       const g = new THREE.Group(); g.name = `CorridorWalls.${c.id}.${side}`;
-      const addWall = (xa, xb) => { if (xb - xa < 0.4) return; g.add(wall(m, xa, z, xb, z, 0, 2.35, { gaps: [], material: 'whiteEnamel', panelled: false })); };
+      const addWall = (xa, xb) => {
+        if (xb - xa < 0.4) return;
+        const gaps = doors.filter((x) => x > xa + 0.7 && x < xb - 0.7).map((x) => (x - xa) / (xb - xa));
+        g.add(wall(m, xa, z, xb, z, 0, 2.35, { gaps, material: 'whiteEnamel', panelled: false, doorW: 1.0, doorH: 2.05 }));
+      };
       let cursor = c.x0;
       for (const [a, b] of taken) { if (a > cursor) addWall(cursor, Math.min(a, c.x1)); cursor = Math.max(cursor, b); if (cursor >= c.x1) break; }
       if (cursor < c.x1) addWall(cursor, c.x1);

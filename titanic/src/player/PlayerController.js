@@ -195,6 +195,20 @@ export class PlayerController {
     this.shake.t = 0;
     if (this.character) this.character.setPose('idle');
     this._updateDeck(true);
+    this.refreshInside();
+  }
+
+  /** Recompute `inside` now (after a teleport, or from the free-camera timer) instead of waiting for the walk update. */
+  refreshInside() {
+    this._insideTimer = 0.15;
+    const part = this.ship && this.ship.partAt ? this.ship.partAt(this.position) : null;
+    if (!(part && part.group && part.bvh)) { this.inside = false; return false; }
+    part.group.updateMatrixWorld(true);
+    _inv.copy(part.group.matrixWorld).invert();
+    _tmp.copy(this.position).addScaledVector(WORLD_UP, this.mode === 'free' ? 0 : this._eyeCurrent).applyMatrix4(_inv);
+    _upL.set(0, 1, 0).transformDirection(_inv);
+    this.inside = this._probeInside(part.bvh);
+    return this.inside;
   }
 
   /**
@@ -215,6 +229,7 @@ export class PlayerController {
     this.yaw = yaw; this.pitch = 0;
     this.sitting = false; this._seat = null; this._anchored = false; this._wasGround = false; this._jumpCooldown = 0; this.shake.t = 0;
     this._updateDeck(true);
+    this.refreshInside();
   }
 
   teleportTo(loc) {
@@ -286,16 +301,7 @@ export class PlayerController {
     if (this.mode === 'free') {
       this._updateFree(dt, enabled);
       this._insideTimer -= dt;
-      if (this._insideTimer <= 0) {
-        this._insideTimer = 0.15;
-        const part = this.ship && this.ship.partAt ? this.ship.partAt(this.position) : null;
-        if (part && part.group && part.bvh) {
-          part.group.updateMatrixWorld(true);
-          _tmp.copy(this.position).applyMatrix4(_inv.copy(part.group.matrixWorld).invert());
-          _upL.set(0, 1, 0).transformDirection(_inv);
-          this.inside = this._probeInside(part.bvh);
-        } else this.inside = false;
-      }
+      if (this._insideTimer <= 0) this.refreshInside();
     } else {
       this._updateWalk(dt, enabled);
     }

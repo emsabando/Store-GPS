@@ -18,6 +18,8 @@ export const LAMP_COLOR_2200K = new THREE.Color(1.0, 0.44, 0.13);
 
 const _c1 = new THREE.Color(), _c2 = new THREE.Color();
 const lerpC = (a, b, t, out) => out.copy(a).lerp(b, t);
+const FOG_INTERIOR = new THREE.Color(0x17120d);
+const _fogIn = new THREE.Color();
 const SUN_KEYS = [
   { el: -3, c: [1.0, 0.30, 0.10], i: 0.0 },
   { el: 0, c: [1.0, 0.42, 0.18], i: 0.55 },
@@ -154,15 +156,18 @@ export class Environment {
       if (typeof this.engine.setExposure === 'function') this.engine.setExposure(L.exposure);
     }
     this._fogTimer += dt;
-    const fogC = s.palette.fog;
+    // Indoors the haze is denser and dark: long alleyways fade out instead of showing the far hull.
+    const inside = s.insideK || 0;
+    const fogC = _fogIn.copy(s.palette.fog).lerp(FOG_INTERIOR, 0.85 * inside);
+    const fogD = L.fogDensity * (1 + 6 * inside);
     if (this._fogTimer > 0.25 || this._fogDensity < 0) {
       this._fogTimer = 0;
       const dc = Math.abs(fogC.r - this._fogColor.r) + Math.abs(fogC.g - this._fogColor.g) + Math.abs(fogC.b - this._fogColor.b);
-      if (dc > 0.004 || Math.abs(L.fogDensity - this._fogDensity) > 1e-5) {
+      if (dc > 0.004 || Math.abs(fogD - this._fogDensity) > 1e-5) {
         this._fogColor.copy(fogC);
-        this._fogDensity = L.fogDensity;
-        if (typeof this.engine.setFog === 'function') this.engine.setFog(this._fogColor.clone(), L.fogDensity);
-        else this.engine.scene.fog = new THREE.FogExp2(this._fogColor.clone(), L.fogDensity);
+        this._fogDensity = fogD;
+        if (typeof this.engine.setFog === 'function') this.engine.setFog(this._fogColor.clone(), fogD);
+        else this.engine.scene.fog = new THREE.FogExp2(this._fogColor.clone(), fogD);
       }
     }
 
