@@ -24,11 +24,31 @@ export function mesh(geom, mat, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, c
   if (name) mm.name = name;
   return mm;
 }
+/** BoxGeometry whose UVs are in metres (one texture tile per metre with the shared library materials). */
+export function boxGeometryM(w, h, d) {
+  const g = new THREE.BoxGeometry(w, h, d);
+  const uv = g.getAttribute('uv');
+  const faceDims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]]; // px, nx, py, ny, pz, nz
+  for (let f = 0; f < 6; f++) {
+    const [su, sv] = faceDims[f];
+    for (let i = f * 4; i < f * 4 + 4; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
+  }
+  uv.needsUpdate = true;
+  return g;
+}
+export function cylinderGeometryM(rTop, rBot, h, seg) {
+  const g = new THREE.CylinderGeometry(rTop, rBot, h, seg);
+  const uv = g.getAttribute('uv');
+  const circ = Math.PI * (rTop + rBot);
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * circ, uv.getY(i) * h);
+  uv.needsUpdate = true;
+  return g;
+}
 export function box(m, w, h, d, matName, opts = {}) {
-  return mesh(cachedGeometry(`box:${w}:${h}:${d}`, () => new THREE.BoxGeometry(w, h, d)), typeof matName === 'string' ? m.get(matName) : matName, { y: h / 2, ...opts });
+  return mesh(cachedGeometry(`box:${w}:${h}:${d}`, () => boxGeometryM(w, h, d)), typeof matName === 'string' ? m.get(matName) : matName, { y: h / 2, ...opts });
 }
 export function cyl(m, rTop, rBot, h, matName, opts = {}, seg = 16) {
-  return mesh(cachedGeometry(`cyl:${rTop}:${rBot}:${h}:${seg}`, () => new THREE.CylinderGeometry(rTop, rBot, h, seg)), typeof matName === 'string' ? m.get(matName) : matName, { y: h / 2, ...opts });
+  return mesh(cachedGeometry(`cyl:${rTop}:${rBot}:${h}:${seg}`, () => cylinderGeometryM(rTop, rBot, h, seg)), typeof matName === 'string' ? m.get(matName) : matName, { y: h / 2, ...opts });
 }
 export function collider(group, w, h, d, { x = 0, y = h / 2, z = 0 } = {}) {
   const c = new THREE.Mesh(cachedGeometry(`box:${w}:${h}:${d}`, () => new THREE.BoxGeometry(w, h, d)), new THREE.MeshBasicMaterial({ visible: false }));

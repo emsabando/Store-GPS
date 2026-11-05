@@ -26,7 +26,7 @@ export class Engine {
   /**
    * @param {{ canvas: HTMLCanvasElement, settings: { get(k): any, onChange(fn): Function } }} o
    */
-  constructor({ canvas, settings }) {
+  constructor({ canvas, settings, preserveDrawingBuffer = false }) {
     this.canvas = canvas;
     this.settings = settings;
     this._updates = new Set();
@@ -60,12 +60,12 @@ export class Engine {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,                 // SMAA in the post chain handles AA
+      preserveDrawingBuffer: !!preserveDrawingBuffer, // manual-render tests screenshot between frames
       powerPreference: 'high-performance',
       logarithmicDepthBuffer: false,
       alpha: false,
       stencil: false,
       depth: true,
-      preserveDrawingBuffer: false,
       premultipliedAlpha: true,
     });
     const r = this.renderer;

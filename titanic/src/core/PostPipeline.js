@@ -77,6 +77,7 @@ export class PostPipeline {
     });
     this.composer.autoRenderToScreen = true;
 
+    // pmndrs' N8AOPostPass expects the scene already rendered by a RenderPass in front of it.
     this.renderPass = new RenderPass(scene, camera);
     this.composer.addPass(this.renderPass);
 
@@ -108,13 +109,13 @@ export class PostPipeline {
     // --- Effects ---
     this.bloom = new BloomEffect({
       mipmapBlur: true,
-      luminanceThreshold: 1.0,
+      luminanceThreshold: 1.15,
       luminanceSmoothing: 0.08,
-      intensity: 0.5,
-      radius: 0.6,
+      intensity: 0.28,
+      radius: 0.55,
       levels: 8,
     });
-    this.toneMapping = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
+    this.toneMapping = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
     this.smaa = new SMAAEffect({
       preset: SMAA_PRESETS[preset.smaa] ?? SMAAPreset.HIGH,
       edgeDetectionMode: EdgeDetectionMode.COLOR,
@@ -162,6 +163,13 @@ export class PostPipeline {
     if (!flags || typeof flags !== 'object') return;
     for (const k of Object.keys(this.requested)) if (typeof flags[k] === 'boolean') this.requested[k] = flags[k];
     this.applyToggles();
+  }
+
+  /** Switch the display transform: 'agx' | 'aces' | 'neutral' | 'reinhard'. */
+  setToneMapping(name) {
+    const modes = { agx: ToneMappingMode.AGX, aces: ToneMappingMode.ACES_FILMIC, neutral: ToneMappingMode.NEUTRAL, reinhard: ToneMappingMode.REINHARD2_ADAPTIVE };
+    const mode = modes[String(name).toLowerCase()];
+    if (mode !== undefined && this.toneMapping.mode !== mode) this.toneMapping.mode = mode;
   }
 
   setQuality(preset) {

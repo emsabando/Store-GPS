@@ -101,7 +101,7 @@ export class World {
     const el = s.sunElevationDeg;
     const dayI = THREE.MathUtils.smoothstep(el, -3, 10);
     const pal = s.palette;
-    sun.intensity = 3.4 * dayI * (pal.sunIntensity ?? 1);
+    sun.intensity = 2.6 * dayI * (pal.sunIntensity ?? 1);
     if (pal.sun) sun.color.copy(pal.sun);
     else if (pal.glow) { sun.color.copy(pal.glow).lerp(SUN_WHITE, THREE.MathUtils.smoothstep(el, 2, 18)); }
     const cam = cameraPos || this.engine.camera.position;

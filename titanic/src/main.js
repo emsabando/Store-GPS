@@ -43,7 +43,7 @@ async function main() {
   const quality = settings.get('quality');
 
   const ui = new UI({ root, bus, settings, spec: SHIP, story: STORY, characters: CHARACTERS, discoveries: DISCOVERIES, collectibles: COLLECTIBLES });
-  const engine = new Engine({ canvas, settings });
+  const engine = new Engine({ canvas, settings, preserveDrawingBuffer: !!params.get('manual') });
   if (params.get('manual')) engine.manualRender = true;
   const clock = new GameClock();
   const progress = (pct, label) => bus.emit('loading:progress', { pct: Math.round(pct), label });

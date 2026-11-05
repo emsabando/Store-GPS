@@ -36,7 +36,7 @@ function buildFunnel(spec, f, materials, hi) {
   };
   const buff = materials.clone('funnelBuff', { side: THREE.DoubleSide });
   const black = materials.clone('funnelBlack', { side: THREE.DoubleSide });
-  materials.setRepeat?.(buff, 3.0, 3.0);
+  materials.setRepeat?.(buff, Math.PI * (f.rx + f.rz) / 2.2, h / 2.2);   // cylinder UVs are 0..1 around and up
   g.add(mkTube(0, buffH, buff), mkTube(buffH, h, black, 0.98));
   // top cap (dark interior) and rim
   const cap = new THREE.Mesh(new THREE.CircleGeometry(1, seg), new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1 }));
