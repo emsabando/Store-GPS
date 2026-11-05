@@ -56,6 +56,8 @@ export class World {
     sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
     sun.shadow.radius = this.quality === 'low' ? 1 : 2;
     scene.add(sun); scene.add(sun.target);
+    // Sky IBL: the PMREM is physically bright; scale it so the sun still reads as the key light.
+    scene.environmentIntensity = 0.45;
     this.sunLight = sun;
     this.setWeather({ wind: this.wind, swell: this.swell });
     this._refreshAstronomy(true);
