@@ -1,0 +1,18 @@
+{
+  "units": [
+    {
+      "UnitId": "B1-0101",
+      "Status": "Sold"
+    },
+    {
+      "UnitId": "B1-0202",
+      "Price": 699000,
+      "Status": "Reserved"
+    },
+    {
+      "UnitId": "B1-0302",
+      "Status": "Available",
+      "Price": 845000
+    }
+  ]
+}

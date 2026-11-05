@@ -1,0 +1,19 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0.0",
+  "FriendlyName": "ArchViz Kit",
+  "Description": "Data-driven core for interactive real-estate apps: unit inventory and filtering, facade highlight, floor cutaway, orbit camera and camera shots, time of day / weather / season, amenity hotspots, app modes with back history, and a JSON command bridge for Pixel Streaming or web UIs.",
+  "Category": "ArchViz",
+  "CreatedBy": "",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "ArchVizKit",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
