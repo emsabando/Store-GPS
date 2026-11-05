@@ -210,7 +210,9 @@ export function buildSuperstructure(spec, materials, ctx) {
   for (const lb of spec.lifeboats || []) {
     const boat = makeLifeboat(materials, { length: lb.length, beam: lb.beam, covered: true, name: lb.id });
     boat.name = `Lifeboat${lb.id}`;
-    const yBase = lb.y ?? yBoat + 1.9;
+    // Boats rested on wooden chocks on the deck (keel ~0.45 m up, gunwale ~1.5 m); the Welin davits
+    // swung them out from there. Roof-stowed collapsibles keep their spec height.
+    const yBase = lb.onRoof && lb.y != null ? lb.y : yBoat + 0.45;
     boat.position.set(lb.x, lb.onRoof ? yBase : yBase, lb.z);
     boat.rotation.y = Math.PI / 2; // props face +z: rotate so the boat's length runs along x
     boat.userData.part = { x0: lb.x - 5, x1: lb.x + 5 };
@@ -229,8 +231,9 @@ export function buildSuperstructure(spec, materials, ctx) {
       }
       // chocks under the boat
       for (const dx of [-lb.length * 0.3, lb.length * 0.3]) {
-        const chock = new THREE.Mesh(new THREE.BoxGeometry(0.3, yBase - yBoat - 0.3, lb.beam * 0.6), materials.get('oakDark'));
-        chock.position.set(lb.x + dx, yBoat + (yBase - yBoat - 0.3) / 2, lb.z); davitPair.add(chock);
+        const ch = Math.max(0.12, yBase - yBoat - 0.08);
+        const chock = new THREE.Mesh(new THREE.BoxGeometry(0.35, ch, lb.beam * 0.55), materials.get('oakDark'));
+        chock.position.set(lb.x + dx, yBoat + ch / 2, lb.z); davitPair.add(chock);
       }
       davitPair.userData.part = boat.userData.part;
       group.add(davitPair);
