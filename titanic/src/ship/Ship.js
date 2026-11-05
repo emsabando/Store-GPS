@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { bakeShip } from './Bake.js';
+import { hullHalfBreadth } from './Hull.js';
 import { buildHull } from './Hull.js';
 import { buildDecks } from './Decks.js';
 import { buildSuperstructure } from './Superstructure.js';
@@ -146,7 +147,7 @@ export class Ship {
       result.group.name = result.group.name || builderName;
       this.group.add(result.group);
       // Interior geometry never sees the sun: keep it out of the shadow pass (thousands of draws).
-      if (interior) result.group.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+      if (interior) result.group.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.userData.interior = true; } });
     }
     for (const loc of result.locations || []) this.locations.set(loc.id, { ...loc });
     for (const l of result.lights || []) { l.userData.baseIntensity = l.intensity; this.lightsList.push(l); }
@@ -273,8 +274,49 @@ export class Ship {
     }
   }
 
+  /**
+   * Camera-based culling (filled in by the bake): interior buckets are hidden while the camera is
+   * outside the hull (they are only ever seen through windows), and kept props (doors, chairs,
+   * small interactables) are hidden beyond their own radius. Cheap: a few hundred distance checks.
+   */
+  updateCulling(cameraWorldPos) {
+    if (!this._interiorMeshes && !this._distCull) return;
+    const c = this.group.worldToLocal(cameraWorldPos.clone());
+    if (this._interiorMeshes) {
+      const ext = this._hullExt || (this._hullExt = (() => {
+        const b = (this.spec.decks || []).find((d) => d.id === 'B') || {};
+        const e = b.hullExtent || {};
+        return { x0: e.x0 ?? -140, x1: e.x1 ?? 130, boatY: this.deckY('boat') || 17.65 };
+      })());
+      const hb = hullHalfBreadth(this.spec, Math.max(ext.x0, Math.min(ext.x1, c.x)), Math.min(c.y, ext.boatY - 2)) || 14;
+      const outside = Math.abs(c.z) > hb + 2.5 || c.y > ext.boatY + 6 || c.x > ext.x1 + 2 || c.x < ext.x0 - 2;
+      // two consecutive agreeing samples before toggling (no flicker at the threshold)
+      if (outside === this._outsidePending) this._outsideCount++; else { this._outsidePending = outside; this._outsideCount = 1; }
+      if (this._outsideCount >= 2 && outside !== this._outside) { this._outside = outside; this._cullKey = null; }
+      // Inside: a room sees at most ~90 m along the ship and a couple of decks up or down (the
+      // Grand Staircase well is the tallest sightline). Re-evaluated when the camera moves a cell.
+      const key = this._outside ? 'out' : `${Math.round(c.x / 10)}|${Math.round(c.y / 3)}`;
+      if (key !== this._cullKey) {
+        this._cullKey = key;
+        for (const m of this._interiorMeshes) {
+          const k = m.userData.cull;
+          m.visible = !this._outside && (!k || (Math.abs(k.cx - c.x) < 70 && Math.abs(k.cy - c.y) < 10));
+        }
+      }
+    }
+    if (this._distCull) {
+      for (const e of this._distCull) {
+        const p = e.obj.position;
+        const dx = p.x - c.x, dy = p.y - c.y, dz = p.z - c.z;
+        const vis = dx * dx + dy * dy + dz * dz < e.r2 && Math.abs(dy) < e.dy;
+        if (vis !== e.obj.visible) e.obj.visible = vis;
+      }
+    }
+  }
+
   update(dt, cameraWorldPos) {
     if (cameraWorldPos) this.updateLightPool(cameraWorldPos);
+    if (cameraWorldPos) { this._cullTimer = (this._cullTimer || 0) - dt; if (this._cullTimer <= 0) { this._cullTimer = 0.1; this.updateCulling(cameraWorldPos); } }
     if (this._flicker > 0) {
       this._flicker -= dt;
       const p = this._flicker <= 0 ? this._powerTarget ?? this._power : (Math.random() < 0.5 ? 0.15 : 1) * (this._powerTarget ?? 1);

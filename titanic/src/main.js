@@ -203,6 +203,7 @@ async function main() {
     const playing = state.mode === 'playing' || state.mode === 'photo';
     if (playing || state.mode === 'dialogue') clock.update(dt);
     engine.camera.getWorldPosition(camPos);
+    if (typeof world.setInside === 'function') world.setInside(!!player.inside);
     world.update(dt, camPos);
     ship.update(dt, camPos);
     if (playing) {

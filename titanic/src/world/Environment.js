@@ -147,7 +147,7 @@ export class Environment {
     const L = lightingForElevation(s.sunElevationDeg, this.lighting);
     this.hemiLight.color.copy(L.hemiSky);
     this.hemiLight.groundColor.copy(L.hemiGround);
-    this.hemiLight.intensity = L.hemiIntensity;
+    this.hemiLight.intensity = L.hemiIntensity * (1 - 0.75 * (s.insideK || 0));
 
     if (Math.abs(L.exposure - this._exposure) > 0.005) {
       this._exposure = L.exposure;

@@ -305,6 +305,12 @@ export class MaterialLibrary {
   clone(name, overrides = {}) {
     const m = this.get(name).clone();
     m.userData = { ...this.get(name).userData, cloned: true };
+    // clones of interior materials keep the warm interior environment (a null envMap would fall
+    // back to the sky PMREM and reflect blue indoors)
+    if (INTERIOR_NAMES.has(name)) {
+      (this.interiorMaterials ||= []).push(m);
+      if (this.interiorEnv) { m.envMap = this.interiorEnv; m.envMapIntensity = INTERIOR_ENV_INTENSITY; }
+    }
     for (const [k, v] of Object.entries(overrides)) { if (v && v.isColor && m[k] && m[k].isColor) m[k].copy(v); else if (typeof v === 'string' && m[k] && m[k].isColor) m[k].set(v); else m[k] = v; }
     return m;
   }

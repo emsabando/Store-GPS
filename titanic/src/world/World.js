@@ -100,8 +100,13 @@ export class World {
     skyPalette(el, this._state.palette);
   }
 
+  /** Camera under cover (player.inside): the sky hemisphere and sun fade so rooms read lamp-lit. */
+  setInside(flag) { this._insideTarget = flag ? 1 : 0; }
+
   update(dt, cameraPos) {
     this._time += dt;
+    this._insideK = (this._insideK ?? 0) + ((this._insideTarget ?? 0) - (this._insideK ?? 0)) * Math.min(1, dt * 3);
+    this._state.insideK = this._insideK;
     this._state.time = this._time;
     this._refreshAstronomy();
     const s = this._state;
@@ -113,7 +118,7 @@ export class World {
     const el = s.sunElevationDeg;
     const dayI = THREE.MathUtils.smoothstep(el, -3, 10);
     const pal = s.palette;
-    sun.intensity = 2.6 * dayI * (pal.sunIntensity ?? 1);
+    sun.intensity = 2.6 * dayI * (pal.sunIntensity ?? 1) * (1 - 0.6 * this._insideK);
     if (pal.sun) sun.color.copy(pal.sun);
     else if (pal.glow) { sun.color.copy(pal.glow).lerp(SUN_WHITE, THREE.MathUtils.smoothstep(el, 2, 18)); }
     const cam = cameraPos || this.engine.camera.position;

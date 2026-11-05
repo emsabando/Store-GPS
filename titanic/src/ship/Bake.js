@@ -174,7 +174,13 @@ export function bakeShip(ship, { log = () => {} } = {}) {
       cx = box.isEmpty() ? mw.elements[12] : box.getCenter(centre).x;
     }
     const side = cx > breakX ? 'bow' : 'stern';
-    const slab = Math.floor(cx / SLAB_M);
+    // Interiors are only seen from close by: short slabs and 6 m height bands give the frustum
+    // test something to cull; exteriors are seen whole from the sea, so they stay coarse.
+    const interior = !!o.userData.interior && o.visible;
+    let cy = 0;
+    if (interior) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); box.copy(o.geometry.boundingBox).applyMatrix4(mw); cy = box.isEmpty() ? mw.elements[13] : box.getCenter(centre).y; }
+    const slab = interior ? Math.floor(cx / 40) : Math.floor(cx / SLAB_M);
+    const band = interior ? Math.floor(cy / 6) : 0;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     const collide = !!o.userData.collide;
     const invisible = !o.visible;
@@ -198,9 +204,9 @@ export function bakeShip(ship, { log = () => {} } = {}) {
     } else push(mat0, slim(o, mw));
     baked++;
     function push(m, g) {
-      const key = `${invisible ? 'c' : m.uuid}|${collide ? 1 : 0}|${side}|${slab}`;
+      const key = `${invisible ? 'c' : m.uuid}|${collide ? 1 : 0}|${side}|${slab}|${interior ? 'i' + band : 'e'}`;
       let b = buckets.get(key);
-      if (!b) { b = { material: invisible ? null : m, geoms: [], collide, invisible, castShadow: false, emissive: false, cx, side }; buckets.set(key, b); }
+      if (!b) { b = { material: invisible ? null : m, geoms: [], collide, invisible, castShadow: false, emissive: false, cx, cy, side, interior }; buckets.set(key, b); }
       b.geoms.push(g);
       if (o.castShadow) b.castShadow = true;
       if (o.userData.emissiveLamp) b.emissive = true;
@@ -225,6 +231,49 @@ export function bakeShip(ship, { log = () => {} } = {}) {
     if (hasAnimatedParts(o)) continue;
     subBaked += subBake(o);
   }
+  // ---- instanced meshes sharing geometry + material (+ break-up side) merge into one ----
+  const instGroups = new Map();
+  for (const o of [...root.children]) {
+    if (!o.isInstancedMesh || o.userData.interactable || o.userData.noBake || o.userData.collide) continue;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    if (!mats.length || mats.some((m) => !m)) continue;
+    o.updateMatrixWorld(true);
+    const rel = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+    if (!o.boundingSphere) { try { o.computeBoundingSphere(); } catch { /* ignore */ } }
+    const c = o.boundingSphere ? o.boundingSphere.center.clone().applyMatrix4(rel) : new THREE.Vector3().setFromMatrixPosition(rel);
+    const side = c.x > breakX ? 'bow' : 'stern';
+    const key = `${o.geometry.uuid}|${mats.map((m) => m.uuid).join('+')}|${side}|${o.castShadow ? 1 : 0}`;
+    let g = instGroups.get(key);
+    if (!g) { g = { geometry: o.geometry, material: o.material, side, castShadow: o.castShadow, receiveShadow: o.receiveShadow, items: [], count: 0, hasColor: false }; instGroups.set(key, g); }
+    g.items.push({ o, rel }); g.count += o.count; if (o.instanceColor) g.hasColor = true;
+  }
+  let instMerged = 0;
+  const _im = new THREE.Matrix4(), _ic = new THREE.Color();
+  for (const g of instGroups.values()) {
+    if (g.items.length < 2) continue;
+    const merged = new THREE.InstancedMesh(g.geometry, g.material, g.count);
+    let k = 0;
+    for (const { o, rel } of g.items) {
+      for (let i = 0; i < o.count; i++) {
+        o.getMatrixAt(i, _im); _im.premultiply(rel); merged.setMatrixAt(k, _im);
+        if (g.hasColor) { if (o.instanceColor) o.getColorAt(i, _ic); else _ic.setRGB(1, 1, 1); merged.setColorAt(k, _ic); }
+        k++;
+      }
+      root.remove(o);
+    }
+    merged.count = k;
+    merged.instanceMatrix.needsUpdate = true;
+    if (merged.instanceColor) merged.instanceColor.needsUpdate = true;
+    merged.castShadow = g.castShadow; merged.receiveShadow = g.receiveShadow;
+    merged.computeBoundingSphere();
+    const cx = merged.boundingSphere ? merged.boundingSphere.center.x : 0;
+    const px = g.side === 'bow' ? Math.max(cx, breakX + 1) : Math.min(cx, breakX - 1);
+    merged.userData.part = { x0: px, x1: px };
+    merged.name = `inst.${(Array.isArray(g.material) ? g.material[0] : g.material).name || 'mat'}.${g.side}`;
+    root.add(merged);
+    instMerged += g.items.length - 1;
+  }
+
   let meshes = 0, tris = 0;
   for (const b of buckets.values()) {
     const merged = b.geoms.length === 1 ? b.geoms[0] : mergeGeometries(b.geoms, false);
@@ -236,6 +285,7 @@ export function bakeShip(ship, { log = () => {} } = {}) {
     mesh.receiveShadow = !b.invisible;
     if (b.collide) mesh.userData.collide = true;
     if (b.emissive) mesh.userData.emissiveLamp = true;
+    if (b.interior && !b.invisible) { mesh.userData.interior = true; mesh.userData.cull = { cx: b.cx, cy: b.cy }; }
     // a representative x on the right side of the break keeps split() honest
     const px = b.side === 'bow' ? Math.max(b.cx, breakX + 1) : Math.min(b.cx, breakX - 1);
     mesh.userData.part = { x0: px, x1: px };
@@ -243,11 +293,29 @@ export function bakeShip(ship, { log = () => {} } = {}) {
     root.add(mesh);
     meshes++; tris += merged.getAttribute('position').count / 3;
   }
+  // ---- culling lists for Ship.updateCulling ----
+  ship._interiorMeshes = [];
+  root.traverse((o) => { if (o.isMesh && o.visible && o.userData.interior) ship._interiorMeshes.push(o); });
+  ship._distCull = [];
+  const neverCull = new Set();
+  for (const f of ship.funnels || []) if (f && f.isObject3D) neverCull.add(f);
+  for (const lb of ship.lifeboats || []) { if (lb.object) neverCull.add(lb.object); if (lb.davit) neverCull.add(lb.davit); }
+  for (const o of root.children) {
+    if (o.isMesh || o.isInstancedMesh || o.isLight || o.isLine || neverCull.has(o) || o.userData.noCull) continue;
+    let r = 0, dy = Infinity;
+    let interiorProp = false;
+    o.traverse((c) => { if (c.userData && c.userData.interior) interiorProp = true; });
+    if (o.userData.door) { r = 45; dy = interiorProp ? 6 : Infinity; }          // a corridor sees its own deck's doors
+    else if (o.name === 'deckChair' || o.userData.dynamic) r = 120;
+    else if (o.userData.interactable) { r = 60; dy = interiorProp ? 8 : Infinity; }
+    if (r) ship._distCull.push({ obj: o, r2: r * r, dy });
+  }
+
   // Lamp flicker/power scales material emissive: re-collect the meshes that carry lamp materials.
   if (Array.isArray(ship.lampMeshes)) {
     ship.lampMeshes.length = 0;
     root.traverse((o) => { if (o.isMesh && o.userData.emissiveLamp) ship.lampMeshes.push(o); });
   }
-  log(`bake: ${baked} meshes → ${meshes} (${Math.round(tris / 1000)}k tris); ${kept.length} kept objects collapsed to ${subBaked} meshes`);
+  log(`bake: ${baked} meshes → ${meshes} (${Math.round(tris / 1000)}k tris); ${kept.length} kept objects collapsed to ${subBaked} meshes; ${instMerged} instanced meshes merged away`);
   return { baked, meshes, kept: kept.length };
 }

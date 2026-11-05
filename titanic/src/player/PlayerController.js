@@ -195,6 +195,16 @@ export class PlayerController {
     this._updateDeck(true);
   }
 
+  /**
+   * Under cover = any ceiling above the eye (a corridor at 2.4 m, a boiler room at 15 m); the open
+   * decks, the wells and the sea find nothing overhead. `_tmp` must hold the eye in ship-local space.
+   */
+  _probeInside(bvh) {
+    if (!bvh) return false;
+    const hit = castRay(bvh, _tmp, _upL, 40.0);
+    return !!hit.hit;
+  }
+
   /** Teleport in WORLD space (exterior free-camera landmarks: the sea does not sink with the ship). */
   teleportWorld(x, y, z, yaw = 0) {
     this.position.set(x, y, z);
@@ -273,6 +283,17 @@ export class PlayerController {
     }
     if (this.mode === 'free') {
       this._updateFree(dt, enabled);
+      this._insideTimer -= dt;
+      if (this._insideTimer <= 0) {
+        this._insideTimer = 0.15;
+        const part = this.ship && this.ship.partAt ? this.ship.partAt(this.position) : null;
+        if (part && part.group && part.bvh) {
+          part.group.updateMatrixWorld(true);
+          _tmp.copy(this.position).applyMatrix4(_inv.copy(part.group.matrixWorld).invert());
+          _upL.set(0, 1, 0).transformDirection(_inv);
+          this.inside = this._probeInside(part.bvh);
+        } else this.inside = false;
+      }
     } else {
       this._updateWalk(dt, enabled);
     }
@@ -559,8 +580,7 @@ export class PlayerController {
     if (this._insideTimer <= 0) {
       this._insideTimer = 0.15;
       _tmp.copy(this.position).addScaledVector(WORLD_UP, this._eyeCurrent).applyMatrix4(_inv);
-      const hit = castRay(bvh, _tmp, _upL, 4.0);
-      this.inside = hit.hit;
+      this.inside = this._probeInside(bvh);
     }
     const eyeY = this.position.y + this._eyeCurrent;
     this.submerged = eyeY < waterY;

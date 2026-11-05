@@ -27,7 +27,7 @@ export function buildMachinery(spec, m, ctx) {
     if (!r) continue;
     const h = Math.min(r.ceiling || 9.7, 9.7);
     const shell = roomShell(spec, m, ctx, { ...r, ceiling: h }, { floor: 'steelGrey', walls: 'steelRusty', ceiling: 'steelGrey', trim: 'steelRusty', panelled: false, floorRepeat: 2.0,
-      doors: { fwd: [0.5], aft: [0.5] }, lamps: { kind: 'bulkhead', nx: 3, nz: 3, lit: 2, power: 1.3 }, plaque: true });
+      doors: { fwd: [0.5], aft: [0.5] }, lamps: { kind: 'bulkhead', nx: 4, nz: 2, lit: 3, power: 1.7 }, plaque: true });
     const g = shell.group;
     const count = br.doubleEnded || br.singleEnded;
     const cx = (r.x0 + r.x1) / 2;
