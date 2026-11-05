@@ -78,7 +78,8 @@ for (const loc of locations) {
       try {
         const rc = window.__game.player.interaction.raycaster; const cam = window.__game.engine.camera;
         const o = cam.position.clone(); const d = cam.getWorldDirection(o.clone()); rc.set(cam.getWorldPosition(o.clone()), d); rc.far = 1000; rc.near = 0.05;
-        const hits = rc.intersectObjects(window.__game.engine.scene.children.filter((c) => !/Sky|Celestial|Ocean/.test(c.name)), true).filter((h) => h.object.visible && (!h.object.material || h.object.material.visible !== false));
+        const shown = (o) => { for (let q = o; q; q = q.parent) if (q.visible === false) return false; return true; };
+        const hits = rc.intersectObjects(window.__game.engine.scene.children.filter((c) => !/Sky|Celestial|Ocean/.test(c.name)), true).filter((h) => shown(h.object) && (!h.object.material || h.object.material.visible !== false));
         const h = hits[0];
         if (h) { const chain = []; let q = h.object; while (q && chain.length < 5) { chain.push(q.name || q.type); q = q.parent; } const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material; pick = { d: +h.distance.toFixed(1), chain: chain.join('<'), mat: m && m.name, col: m && m.color ? m.color.getHexString() : null, pt: h.point.toArray().map((v) => +v.toFixed(1)) }; }
         else pick = { none: true };

@@ -403,6 +403,24 @@ export class Ship {
     return hit ? hit.point.y : null;
   }
 
+  /**
+   * A spot near (x, y, z) (ship-local) whose floor is the deck itself — not a table, bench or hatch
+   * cover. Landmarks sit at room centres, where furniture often stands. Returns { x, z } or null
+   * when the point is already fine / nothing better is found within `radius`.
+   */
+  findStandable(x, y, z, radius = 3) {
+    const ok = (px, pz) => { const gy = this.groundAt(px, y + 1.2, pz, 3); return gy === null || Math.abs(gy - y) < 0.35; };
+    if (ok(x, z)) return null;
+    for (let r = 0.8; r <= radius; r += 0.8) {
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
+        if (ok(px, pz)) return { x: px, z: pz };
+      }
+    }
+    return null;
+  }
+
   partAt(worldPos) {
     if (!this.broken || !this.parts) return { group: this.group, bvh: this.collision?.bvh || null };
     const local = this.group.worldToLocal(worldPos.clone());

@@ -177,6 +177,8 @@ export class PlayerController {
   }
 
   teleportLocal(x, y, z, yaw = 0) {
+    // step off furniture: landmarks sit at room centres, where a table may stand
+    if (this.ship && typeof this.ship.findStandable === 'function') { const s = this.ship.findStandable(x, y, z); if (s) { x = s.x; z = s.z; } }
     _tmp.set(x, y, z);
     this.ship.group.updateMatrixWorld(true);
     this.ship.group.localToWorld(_tmp);
