@@ -199,7 +199,12 @@ export class NPCManager {
     const tmp = { x: 0, z: 0 };
     for (let i = 0; i < n; i++) {
       const look = makeLook(faction, rng);
-      randomPointInArea(area, rng, tmp);
+      // pick a point whose floor is the deck itself (not a hatch cover, table or bench top)
+      for (let attempt = 0; attempt < 8; attempt++) {
+        randomPointInArea(area, rng, tmp);
+        const gy = this.ship && typeof this.ship.groundAt === 'function' ? this.ship.groundAt(tmp.x, y + 1.2, tmp.z, 3) : null;
+        if (gy === null || Math.abs(gy - y) < 0.3) break;
+      }
       const behaviour = this._crowdBehaviour(faction, rng);
       const id = 'crowd_' + (this._crowdSeq++);
       const speaker = speakerName(faction, look.sex);

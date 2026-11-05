@@ -14,6 +14,8 @@ import { buildPublicRoomsB } from './interiors/PublicRoomsB.js';
 import { buildCabinsAndCorridors } from './interiors/Cabins.js';
 import { buildMachinery } from './interiors/Machinery.js';
 
+const _groundRay = new THREE.Ray();
+
 /** Merge the position-only, world-transformed geometry of meshes into one non-indexed BufferGeometry (relative to `parentInverse`). */
 function mergeColliders(meshes, parentInverse) {
   const parts = [];
@@ -318,6 +320,19 @@ export class Ship {
   }
 
   /** Collision frame for a point (world): { group, bvh } — whole ship, or the part containing the point after the break. */
+  /**
+   * Height of the first surface below (x, fromY, z) in ship-local metres, or null if nothing within
+   * `maxDrop`. Uses the intact-hull BVH (pre break-up). Cheap enough for spawn placement.
+   */
+  groundAt(x, fromY, z, maxDrop = 4) {
+    const bvh = this.collision && this.collision.bvh;
+    if (!bvh) return null;
+    _groundRay.origin.set(x, fromY, z);
+    _groundRay.direction.set(0, -1, 0);
+    const hit = bvh.raycastFirst(_groundRay, THREE.DoubleSide, 0, maxDrop);
+    return hit ? hit.point.y : null;
+  }
+
   partAt(worldPos) {
     if (!this.broken || !this.parts) return { group: this.group, bvh: this.collision?.bvh || null };
     const local = this.group.worldToLocal(worldPos.clone());
