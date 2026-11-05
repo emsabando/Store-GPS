@@ -17,6 +17,8 @@ import { buildCabinsAndCorridors } from './interiors/Cabins.js';
 import { buildMachinery } from './interiors/Machinery.js';
 
 const _groundRay = new THREE.Ray();
+/** True when `o` has a door group (userData.door) between itself and `root`. */
+function underDoor(o, root) { for (let q = o.parent; q && q !== root; q = q.parent) if (q.userData && q.userData.door) return true; return false; }
 
 /** Merge the position-only, world-transformed geometry of meshes into one non-indexed BufferGeometry (relative to `parentInverse`). */
 function mergeColliders(meshes, parentInverse) {
@@ -184,7 +186,11 @@ export class Ship {
   buildCollision(root = this.group) {
     root.updateMatrixWorld(true);
     const meshes = [];
-    root.traverse((o) => { if (o.isMesh && o.userData.collide && o.geometry && o.geometry.attributes.position) meshes.push(o); });
+    // door leaves move: they are blocked dynamically (PlayerController ↔ ship.doorBlockers), not baked in
+    const meshes0 = [];
+    root.traverse((o) => { if (o.isMesh && o.userData.collide && o.geometry && o.geometry.attributes.position) meshes0.push(o); });
+    for (const o of meshes0) if (!underDoor(o, root)) meshes.push(o);
+    this.collectDoorBlockers(root);
     if (meshes.length === 0) {
       // Fallback: a flat invisible plank so the player has something to stand on.
       const g = new THREE.BoxGeometry(260, 0.2, 28);
@@ -225,7 +231,7 @@ export class Ship {
     if (!this.lamps.length) return;
     if (!this.pool.length) {
       for (let i = 0; i < this.poolSize; i++) {
-        const pl = new THREE.PointLight(0xffa552, 0, 12, 2);
+        const pl = new THREE.PointLight(0xffa552, 0, 16, 2);
         pl.name = `pooledLamp${i}`; pl.castShadow = false;
         this.group.add(pl); this.pool.push(pl);
       }
@@ -378,7 +384,7 @@ export class Ship {
   _buildPartCollision(partGroup) {
     partGroup.updateMatrixWorld(true);
     const meshes = [];
-    partGroup.traverse((o) => { if (o.isMesh && o.userData.collide && o.geometry?.attributes?.position) meshes.push(o); });
+    partGroup.traverse((o) => { if (o.isMesh && o.userData.collide && o.geometry?.attributes?.position && !underDoor(o, partGroup)) meshes.push(o); });
     if (!meshes.length) return { bvh: null, mesh: null };
     const inv = new THREE.Matrix4().copy(partGroup.matrixWorld).invert();
     const geom = mergeColliders(meshes, inv);
@@ -433,6 +439,23 @@ export class Ship {
     return seats;
   }
 
+  /**
+   * Door leaves for dynamic blocking: { door (group), data (toggle/open), leaves: [collide mesh] }.
+   * A leaf mesh's geometry bounding box, in the mesh's own frame, is its blocking slab.
+   */
+  collectDoorBlockers(root = this.group) {
+    const list = [];
+    root.traverse((o) => {
+      if (!o.userData || !o.userData.door) return;
+      const leaves = [];
+      o.traverse((c) => { if (c !== o && c.isMesh && c.userData.collide && c.geometry) { if (!c.geometry.boundingBox) c.geometry.computeBoundingBox(); leaves.push(c); } });
+      if (leaves.length) list.push({ door: o, data: o.userData.door, leaves });
+    });
+    this.doorBlockers = list;
+    this.log(`[ship] door blockers: ${list.length}`);
+    return list;
+  }
+
   /** Nearest seat with a free slot within `radius` of (x, y, z) ship-local, or null. */
   nearestFreeSeat(x, y, z, radius = 5) {
     let best = null, bd = radius * radius;
@@ -450,13 +473,23 @@ export class Ship {
    * when the point is already fine / nothing better is found within `radius`.
    */
   findStandable(x, y, z, radius = 3) {
-    const ok = (px, pz) => { const gy = this.groundAt(px, y + 1.2, pz, 3); return gy === null || Math.abs(gy - y) < 0.35; };
+    const ok = (px, pz) => { const gy = this.groundAt(px, y + 1.2, pz, 3); return gy === null || Math.abs(gy - y) < 0.5; };
     if (ok(x, z)) return null;
+    const bvh = this.collision && this.collision.bvh;
+    // a candidate must be reachable: nothing between the point and it at knee height (no bulkheads)
+    const reachable = (px, pz) => {
+      if (!bvh) return true;
+      _groundRay.origin.set(x, y + 0.5, z);
+      _groundRay.direction.set(px - x, 0, pz - z);
+      const d = _groundRay.direction.length();
+      _groundRay.direction.divideScalar(d || 1);
+      return !bvh.raycastFirst(_groundRay, THREE.DoubleSide, 0, d);
+    };
     for (let r = 0.8; r <= radius; r += 0.8) {
       for (let k = 0; k < 12; k++) {
         const a = (k / 12) * Math.PI * 2;
         const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
-        if (ok(px, pz)) return { x: px, z: pz };
+        if (ok(px, pz) && reachable(px, pz)) return { x: px, z: pz };
       }
     }
     return null;

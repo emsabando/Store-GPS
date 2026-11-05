@@ -289,15 +289,17 @@ export function makeDoor(m, { w = 0.9, h = 2.1, style = 'oak', open = false, dou
     }
     pivot.add(leaf);
     g.add(pivot);
-    leaves.push({ pivot, dir });
+    leaves.push({ pivot, dir, x0: pivot.position.x });
   }
   const state = { open: !!open, anim: null };
-  const target = () => leaves.map((l) => (state.open ? -l.dir * Math.PI * 0.52 : 0));
-  const apply = (ys) => leaves.forEach((l, i) => { l.pivot.rotation.y = ys[i]; });
+  // Watertight doors slid (into the bulkhead); everything else swings on its hinge.
+  const slide = style === 'wtDoor';
+  const target = () => leaves.map((l) => (state.open ? (slide ? -l.dir * w * 0.92 : -l.dir * Math.PI * 0.52) : 0));
+  const apply = (vs) => leaves.forEach((l, i) => { if (slide) l.pivot.position.x = l.x0 + vs[i]; else l.pivot.rotation.y = vs[i]; });
   if (state.open) apply(target());
   const toggle = () => {
     state.open = !state.open;
-    const from = leaves.map((l) => l.pivot.rotation.y), to = target();
+    const from = leaves.map((l) => (slide ? l.pivot.position.x - l.x0 : l.pivot.rotation.y)), to = target();
     const t0 = performance.now();
     const step = () => {
       const t = Math.min(1, (performance.now() - t0) / 450);

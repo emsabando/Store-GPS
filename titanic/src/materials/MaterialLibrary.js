@@ -274,9 +274,12 @@ export class MaterialLibrary {
     if (def.props) for (const [k, v] of Object.entries(def.props)) { if (v && v.isColor && mat[k] && mat[k].isColor) mat[k].copy(v); else mat[k] = v; }
     // three multiplies the scalar roughness by the map; scale it so the map's mean lands on the tuned value.
     if (mat.roughnessMap && pack && pack.source === 'vendored' && mat.roughnessMap.image) {
+      // averageColour decodes sRGB → linear; a NoColorSpace roughness map is raw data, so encode
+      // back to get its real mean (the old double decode made every mean ≈ 0.05 and pushed the
+      // factor to the clamp: metals went black). Scale so mean × factor ≈ the wanted roughness.
       const avg = averageColour(mat.roughnessMap.image);
-      const mean = avg ? Math.max(0.05, new THREE.Color().copySRGBToLinear(avg).g) : 0.5; // NoColorSpace map: undo the sRGB decode of averageColour
-      mat.roughness = THREE.MathUtils.clamp((def.roughness ?? 0.6) / mean, 0.05, 3);
+      const mean = avg ? Math.max(0.08, new THREE.Color().copy(avg).convertLinearToSRGB().g) : 0.5;
+      mat.roughness = THREE.MathUtils.clamp((def.roughness ?? 0.6) / mean, 0.1, 1.6);
     }
     mat.userData.materialName = name;
     if (INTERIOR_NAMES.has(name)) {

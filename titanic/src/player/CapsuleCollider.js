@@ -156,3 +156,60 @@ export function capsuleOverlaps(bvh, start, end, radius) {
     intersectsTriangle: (tri) => tri.closestPointToSegment(_segment, _triPoint, _capPoint) < radius,
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Dynamic blockers: door leaves (thin boxes that move) are kept out of the static BVH and resolved
+// here. `matrix` places the box (its geometry bounding box) in the capsule's frame.
+// ---------------------------------------------------------------------------------------------
+const _bInv = new THREE.Matrix4();
+const _bs = new THREE.Vector3(), _be = new THREE.Vector3(), _bp = new THREE.Vector3(), _bq = new THREE.Vector3(), _bd = new THREE.Vector3();
+const _bMin = new THREE.Vector3(), _bMax = new THREE.Vector3();
+
+/**
+ * Push a capsule (start → end, radius) out of an oriented box. Returns true when it moved the
+ * capsule; `push` (optional Vector3) receives the applied translation in the capsule's frame.
+ */
+export function resolveCapsuleBox(start, end, radius, box, matrix, push = null) {
+  _bInv.copy(matrix).invert();
+  _bs.copy(start).applyMatrix4(_bInv);
+  _be.copy(end).applyMatrix4(_bInv);
+  _bMin.copy(box.min); _bMax.copy(box.max);
+  // closest point on the segment to the box: alternate clamping a few times
+  _bp.lerpVectors(_bs, _be, 0.5);
+  for (let i = 0; i < 4; i++) {
+    _bq.copy(_bp).clamp(_bMin, _bMax);
+    _bd.subVectors(_be, _bs);
+    const l2 = _bd.lengthSq();
+    const t = l2 > 1e-9 ? THREE.MathUtils.clamp(_bq.clone().sub(_bs).dot(_bd) / l2, 0, 1) : 0;
+    _bp.lerpVectors(_bs, _be, t);
+  }
+  _bq.copy(_bp).clamp(_bMin, _bMax);
+  _bd.subVectors(_bp, _bq);
+  const d = _bd.length();
+  if (d > 1e-6) {
+    if (d >= radius) return false;
+    _bd.multiplyScalar((radius - d) / d);
+  } else {
+    // the segment passes through the slab: leave by the nearest face
+    let best = Infinity, axis = 0, sign = 1;
+    for (let a = 0; a < 3; a++) {
+      const c = a === 0 ? _bp.x : a === 1 ? _bp.y : _bp.z;
+      const lo = a === 0 ? _bMin.x : a === 1 ? _bMin.y : _bMin.z, hi = a === 0 ? _bMax.x : a === 1 ? _bMax.y : _bMax.z;
+      if (c - lo < best) { best = c - lo; axis = a; sign = -1; }
+      if (hi - c < best) { best = hi - c; axis = a; sign = 1; }
+    }
+    if (axis === 1) return false;                       // never pop through floors/lintels vertically
+    _bd.set(0, 0, 0);
+    if (axis === 0) _bd.x = sign * (best + radius); else _bd.z = sign * (best + radius);
+  }
+  // the push is a vector in box space: rotate it into the capsule frame, keeping its length
+  const len = _bd.length() * matrix.getMaxScaleOnAxis();
+  _bd.transformDirection(matrix).multiplyScalar(len);
+  return applyPush(start, end, _bd, push);
+}
+
+function applyPush(start, end, v, push) {
+  start.add(v); end.add(v);
+  if (push) push.add(v);
+  return true;
+}

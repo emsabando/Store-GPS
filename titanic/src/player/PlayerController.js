@@ -11,7 +11,7 @@
  * above it along world up. `teleportLocal(x, y, z, yaw)` places the feet at that ship-local point.
  */
 import * as THREE from 'three';
-import { resolveCapsule, castRay, capsuleOverlaps } from './CapsuleCollider.js';
+import { resolveCapsule, castRay, capsuleOverlaps, resolveCapsuleBox } from './CapsuleCollider.js';
 import { PlayerInteraction } from './PlayerInteraction.js';
 import { makeCharacter } from './Character.js';
 
@@ -56,6 +56,8 @@ const _before = new THREE.Vector3();
 const _try = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
 const _tmp2 = new THREE.Vector3();
+const _doorM = new THREE.Matrix4();
+const _push = new THREE.Vector3();
 const _fwd = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _wish = new THREE.Vector3();
@@ -196,6 +198,30 @@ export class PlayerController {
     if (this.character) this.character.setPose('idle');
     this._updateDeck(true);
     this.refreshInside();
+  }
+
+  /**
+   * Push the capsule (at `_posL`, part-local) out of nearby door leaves — closed doors block, open
+   * leaves lie along the wall. `_inv` must hold the part's inverse world matrix. `_push` receives
+   * the unit push direction. Returns true when the capsule moved.
+   */
+  _resolveDoors(h) {
+    const list = this.ship && this.ship.doorBlockers;
+    if (!list || !list.length) return false;
+    let moved = false;
+    _push.set(0, 0, 0);
+    _start.copy(_posL).addScaledVector(_upL, RADIUS);
+    _end.copy(_posL).addScaledVector(_upL, h - RADIUS);
+    for (const b of list) {
+      _tmp.setFromMatrixPosition(b.door.matrixWorld).applyMatrix4(_inv);
+      if (_tmp.distanceToSquared(_posL) > 20) continue;
+      for (const leaf of b.leaves) {
+        _doorM.multiplyMatrices(_inv, leaf.matrixWorld);
+        if (resolveCapsuleBox(_start, _end, RADIUS, leaf.geometry.boundingBox, _doorM, _push)) moved = true;
+      }
+    }
+    if (moved) { _posL.copy(_start).addScaledVector(_upL, -RADIUS); if (_push.lengthSq() > 1e-12) _push.normalize(); }
+    return moved;
   }
 
   /** Recompute `inside` now (after a teleport, or from the free-camera timer) instead of waiting for the walk update. */
@@ -523,6 +549,11 @@ export class PlayerController {
             }
           }
         }
+      }
+      // ---- dynamic blockers: door leaves are not in the static BVH ----
+      if (this._resolveDoors(h)) {
+        const d = _velL.dot(_push);
+        if (d < 0) _velL.addScaledVector(_push, -d);     // no velocity into the door
       }
       // ---- velocity response to contacts ----
       if (stepGround) {

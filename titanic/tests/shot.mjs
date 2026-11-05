@@ -3,7 +3,8 @@
  *   node tests/shot.mjs --locations=a,b --time=18:20 --quality=high --w=960 --h=540 [--out=screenshots/quick] [--sink=120]
  *   Options: --at=<spawn location> --watch=watchN --yaw=<rad> --pitch=<rad> (applied after each teleport)
  *            --calls (draw-call breakdown) --pick (what the centre ray hits) --custom (window.__shotProbe())
- *            --eval="js with `game`" (runs once before the locations) --helm (keep the pointer-lock prompt) --settle=ms
+ *            --eval="js with `game`" or --evalFile=path (runs once before the locations; a returned promise is awaited)
+ *            --helm (keep the pointer-lock prompt) --settle=ms
  *   A location may be free-camera coordinates "x:y:z[:yaw:pitch]" (world metres, radians).
  * Serves dist/ (run `npx vite build` first), boots with ?autostart&manual, teleports, renders 2 frames, saves PNGs.
  */
@@ -51,7 +52,8 @@ if (args.sink) {
 }
 if (args.calls) await page.evaluate(() => { window.__shotCalls = true; });
 if (args.pick) await page.evaluate(() => { window.__shotPick = true; });
-if (args.eval) await page.evaluate((code) => (new Function('game', code))(window.__game), String(args.eval));   // a returned promise is awaited
+const evalCode = args.evalFile ? fs.readFileSync(path.resolve(root, String(args.evalFile)), 'utf8') : (args.eval ? String(args.eval) : null);
+if (evalCode) await page.evaluate((code) => (new Function('game', code))(window.__game), evalCode);   // a returned promise is awaited
 for (const loc of locations) {
   const info = await page.evaluate(async ({ id, yaw, pitch }) => {
     try {

@@ -19,6 +19,8 @@ export const LAMP_COLOR_2200K = new THREE.Color(1.0, 0.44, 0.13);
 const _c1 = new THREE.Color(), _c2 = new THREE.Color();
 const lerpC = (a, b, t, out) => out.copy(a).lerp(b, t);
 const FOG_INTERIOR = new THREE.Color(0x17120d);
+const HEMI_INTERIOR_SKY = new THREE.Color(0xffe3b8);
+const HEMI_INTERIOR_GROUND = new THREE.Color(0x3d2e20);
 const _fogIn = new THREE.Color();
 const SUN_KEYS = [
   { el: -3, c: [1.0, 0.30, 0.10], i: 0.0 },
@@ -147,9 +149,12 @@ export class Environment {
   update(dt, s) {
     this._time += dt;
     const L = lightingForElevation(s.sunElevationDeg, this.lighting);
-    this.hemiLight.color.copy(L.hemiSky);
-    this.hemiLight.groundColor.copy(L.hemiGround);
-    this.hemiLight.intensity = L.hemiIntensity * (1 - 0.75 * (s.insideK || 0));
+    // Under cover the sky hemisphere gives way to lamp-light ambient: warm ceilings, dark floors.
+    // Pooled point lights add the highlights; this keeps big rooms (the dining saloon) readable.
+    const inK = s.insideK || 0;
+    this.hemiLight.color.copy(L.hemiSky).lerp(HEMI_INTERIOR_SKY, inK);
+    this.hemiLight.groundColor.copy(L.hemiGround).lerp(HEMI_INTERIOR_GROUND, inK);
+    this.hemiLight.intensity = L.hemiIntensity * (1 - inK) + 0.85 * inK;
 
     if (Math.abs(L.exposure - this._exposure) > 0.005) {
       this._exposure = L.exposure;
