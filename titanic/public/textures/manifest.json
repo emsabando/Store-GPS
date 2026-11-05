@@ -13,7 +13,7 @@
   "asset": "WoodFloor051",
   "resolution": 2048,
   "bytes": 676104,
-  "note": "clean warm plank floor → teak deck planks (repeat tuned to ~0.15 m planks)"
+  "note": "clean warm plank floor \u2192 teak deck planks (repeat tuned to ~0.15 m planks)"
  },
  "pineDeck": {
   "color": "Planks033A/color.webp",
@@ -29,7 +29,7 @@
   "asset": "Planks033A",
   "resolution": 1024,
   "bytes": 251484,
-  "note": "pale planks → holystoned pine deck"
+  "note": "pale planks \u2192 holystoned pine deck"
  },
  "oakPanel": {
   "color": "Wood049/color.webp",
@@ -126,19 +126,21 @@
   "note": "white gloss paint with fine cracks"
  },
  "whitePaintedSteel": {
-  "color": "Metal016/color.webp",
-  "normal": "Metal016/normal.webp",
-  "roughness": "Metal016/roughness.webp",
+  "color": "Paint004/color.webp",
+  "normal": "Paint004/normal.webp",
+  "roughness": "Paint004/roughness.webp",
+  "ao": "Paint004/ao.webp",
   "sizeM": [
    1,
    1
   ],
   "source": "ambientCG",
   "license": "CC0",
-  "asset": "Metal016",
+  "asset": "Paint004",
   "resolution": 1024,
-  "bytes": 395528,
-  "note": "light painted, lightly scratched steel"
+  "bytes": 380868,
+  "note": "white painted steel: the same gloss paint as the enamel, slightly warmer tint",
+  "tint": "#e9e6dc"
  },
  "hullBlack": {
   "color": "Metal027/color.webp",
@@ -688,7 +690,7 @@
   "resolution": 1024,
   "tint": "#5a5a5c",
   "bytes": 1026442,
-  "note": "black gravel → coal heap"
+  "note": "black gravel \u2192 coal heap"
  },
  "woodCrate": {
   "color": "Planks011/color.webp",

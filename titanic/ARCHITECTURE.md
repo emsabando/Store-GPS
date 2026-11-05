@@ -319,6 +319,19 @@ ui:photoMode, ui:mode, ui:requestPointerLock, ui:toggleView, audio:play`
 - Never give a material `transmission > 0` (three.js renders the whole opaque scene again into
   the transmission buffer whenever one is on screen). Glass is alpha-blended instead.
 - `QualityPresets.shadowEveryN` / `engine.shadowEveryN`: the sun shadow map refreshes every N frames.
+- Seats: seat props set `userData.seat = { y, w, slots }` (origin at the base centre, sitter faces +z).
+  `RoomKit.bakeGroup` records them in `group.userData.seats` before merging; `Ship.collectSeats()`
+  (before the bake) turns both into `ship.seats[]` `{ x, y, z, yaw, w, slots, taken, deck }`;
+  `ship.nearestFreeSeat(x, y, z, r)`. NPCs with the `sit` behaviour take a slot on spawn and
+  release it on despawn. Benches, sofas and deck chairs also carry a player `sit` interactable
+  (`data.seatY/seatZ`), so they are kept whole by the bake.
+- `ship.findStandable(x, y, z, r)` → a nearby point whose floor is the deck (not furniture);
+  `PlayerController.teleportLocal` uses it so landmarks at room centres do not land on tables.
+- `Ship.updateCulling()` (every 0.1 s): interior buckets hidden from outside the hull and beyond
+  ±70 m / ±10 m indoors (`userData.cull = { cx, cy }`); kept props by distance (`ship._distCull`).
+- `materials.interiorVariant(mat)`: a cached clone of an exterior-class material (brass, iron…)
+  lit by the warm interior PMREM; the bake applies it to interior buckets and interior props.
+- `world.setInside(flag)` (from `player.inside`): hemisphere and sun fade under cover, sun shadows off.
 - `tests/shot.mjs --calls` prints full / no-shadow / plain draw-call counts per location;
   `--custom` with `--eval="window.__shotProbe = () => ({...})"` returns a custom probe per location.
 

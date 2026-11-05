@@ -54,7 +54,7 @@ cd Store-GPS/titanic && npm install && npm run dev
 | --- | --- |
 | Walk / run / jump / crouch | `W A S D` (arrows) · `Shift` · `Space` · `C` |
 | Look | mouse (click the viewport to take the helm; `Esc` releases it) |
-| Interact / talk / sit / open doors | `E` |
+| Interact / talk / open doors / sit on benches and deck chairs | `E` |
 | Flashlight (after the lights fail) | `F` |
 | Deck plan (blueprint, teleport by pin) | `Tab` or `M` |
 | Ship's log (journal, discoveries, manifest) | `J` |
