@@ -62,7 +62,7 @@ const DEFS = {
   teakDeck: { roughness: 0.68, normalScale: 0.8, fallback: (s) => P.makePlanks({ widthM: 1.2, lengthM: 2.4, plankW: 0.15, plankL: 2.4, color: PALETTE.teakDeck, gapColor: '#1a1510', size: s }) },
   pineDeck: { roughness: 0.78, normalScale: 0.7, fallback: (s) => P.makePlanks({ widthM: 1.2, lengthM: 2.4, plankW: 0.12, plankL: 2.4, color: PALETTE.pineDeck, gapColor: '#4a3b28', variation: 0.3, size: s }) },
   oakPanel: { roughness: 0.42, physical: true, props: { clearcoat: 0.25, clearcoatRoughness: 0.4 }, normalScale: 0.7, fallback: (s) => P.makePanel({ wood: 'oak', color: PALETTE.oakPanel, mouldings: true, size: s }) },
-  oakDark: wood(PALETTE.oakDark, 0.45, true), mahogany: wood(PALETTE.mahogany, 0.35, true), walnut: wood(PALETTE.walnut, 0.4, true), sycamore: wood(PALETTE.sycamore, 0.5),
+  oakDark: wood(PALETTE.oakDark, 0.45, true), mahogany: { ...wood(PALETTE.mahogany, 0.35, true), colour: '#5a2616' }, walnut: { ...wood(PALETTE.walnut, 0.4, true), colour: '#5b3a23' }, sycamore: wood(PALETTE.sycamore, 0.5),
   whiteEnamel: { roughness: 0.28, physical: true, props: { clearcoat: 0.5, clearcoatRoughness: 0.2 }, normalScale: 0.4, fallback: (s) => P.makePaint({ color: PALETTE.whiteEnamel, wear: 0.05, roughness: 0.28, size: s }) },
   whitePaintedSteel: paint(PALETTE.whitePaintedSteel, 0.45, 0.2),
   hullBlack: { ...paint(PALETTE.hullBlack, 0.45, 0.1), metalness: 0.15, fallback: (s) => P.makeRivetedPlates({ color: PALETTE.hullBlack, seam: 0, size: s }) },
@@ -195,7 +195,7 @@ export class MaterialLibrary {
     const extra = this.extraDefs[name];
     if (!extra) return d;
     const base = extra.texture && DEFS[extra.texture] ? DEFS[extra.texture] : {};
-    return { ...base, ...d, roughness: extra.roughness ?? d.roughness ?? base.roughness, metalness: extra.metalness ?? d.metalness ?? base.metalness, physical: extra.physical || d.physical || base.physical, props: { ...(base.props || {}), ...(d.props || {}), ...(extra.props || {}) }, colour: extra.color || PALETTE[name] || PALETTE[extra.texture], manifestName: extra.texture || name };
+    return { ...base, ...d, roughness: extra.roughness ?? d.roughness ?? base.roughness, metalness: extra.metalness ?? d.metalness ?? base.metalness, physical: extra.physical || d.physical || base.physical, props: { ...(base.props || {}), ...(d.props || {}), ...(extra.props || {}) }, colour: d.colour || extra.color || PALETTE[name] || PALETTE[extra.texture], manifestName: extra.texture || name };
   }
 
   _prepTexture(tex, srgb) {

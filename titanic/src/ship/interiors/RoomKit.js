@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeLamp, makePlaque, box } from '../Props.js';
+import { hullHalfBreadth } from '../Hull.js';
 
 export const DECK_ORDER = ['boat', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'orlop', 'tankTop'];
 
@@ -63,12 +64,20 @@ export function roomShell(spec, m, ctx, room, opts = {}) {
   const g = new THREE.Group();
   g.name = `Room.${room.id}`;
   const lights = [];
-  const { x0, x1, z0, z1 } = room;
+  let { x0, x1, z0, z1 } = room;
   // local: the group is lifted to room.y. The ceiling never rises into the deck above (the spec's
   // 3.7 m public-room ceilings describe raised bays; the slab above still sits at heightToNext).
   const deckAbove = (spec.decks || []).find((d) => Math.abs((d.y ?? -999) - (room.y ?? 0)) < 0.02);
   const hMax = deckAbove && deckAbove.heightToNext ? deckAbove.heightToNext - 0.2 : 99;
   const y = 0, h = Math.min(room.ceiling || 2.6, hMax);
+  // Keep the shell inside the hull (spec rectangles overshoot the tapering ends) and a hand's
+  // breadth inside the deckhouse/hull plating so panelling is seen instead of the outer wall.
+  const yMid = (room.y ?? 0) + 1.2;
+  let hb = Infinity;
+  for (const sx of [x0, x0 + (x1 - x0) * 0.25, (x0 + x1) / 2, x0 + (x1 - x0) * 0.75, x1]) hb = Math.min(hb, hullHalfBreadth(spec, sx, yMid) || Infinity);
+  const inset = opts.inset ?? 0.12;
+  if (Number.isFinite(hb)) { z0 = Math.max(z0, -hb + 0.3); z1 = Math.min(z1, hb - 0.3); }
+  x0 += inset; x1 -= inset; z0 += inset; z1 -= inset;
   g.position.y = room.y;
   const floorMat = opts.floorMat || tiled(m, opts.floor || room.materials?.floor || 'linoCorridor', opts.floorRepeat || 2.0);
   const wallMat = opts.walls || room.materials?.walls || 'whiteEnamel';

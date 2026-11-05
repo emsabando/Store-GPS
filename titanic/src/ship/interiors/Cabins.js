@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three';
 import { findRoom, roomShell, gridPlace, bakeGroup, tiled, wall } from './RoomKit.js';
+import { hullHalfBreadth } from '../Hull.js';
 import { makeBed, makeWardrobe, makeSofa, makeDesk, makeChair, makeTable, makeSink, makeBathtub, makeDoor, makeLamp, makeBench, makeFireplace, makePalm, makeShipsWheel, makeBinnacle, makeTelegraph, makeClock, makeBookcase, box, cyl } from '../Props.js';
 
 const STYLES = [
@@ -20,19 +21,33 @@ const STYLES = [
 function loc(id, name, deck, x, y, z, yaw = Math.PI) { return { id, name, deck, x, y, z, yaw }; }
 
 /** A block of cabins along both sides of a corridor: partitions, doors, bunks. Local y = 0 at the deck. */
-function cabinBlock(m, g, { x0, x1, zIn, zOut, cabinW = 2.6, depthClass = 'third', ceiling = 2.4, doorEvery = 1, bunk = 'bunk2', wallMat = 'whiteEnamel', floorMat = null, nameBase = 'cabin', interactables, seed = 1 }) {
+function cabinBlock(m, g, { x0, x1, zIn, zOut, cabinW = 2.6, depthClass = 'third', ceiling = 2.4, doorEvery = 1, bunk = 'bunk2', wallMat = 'whiteEnamel', floorMat = null, nameBase = 'cabin', spec = null, deckY = 0, ceilMat = 'plasterWhite', interactables, seed = 1 }) {
   const n = Math.max(1, Math.floor((x1 - x0) / cabinW));
   const sign = Math.sign(zOut - zIn) || 1;
-  const depth = Math.abs(zOut - zIn);
-  // the outboard wall is the hull/other rooms; add the inboard wall with doors, and partitions
+  // The outboard side is the hull (or another room): clamp it to the hull breadth at each x so
+  // cabins near the tapering ends never poke through the plating.
+  const outAt = (x) => {
+    if (!spec) return zOut;
+    const hb = hullHalfBreadth(spec, x, deckY + 1.2);
+    return Number.isFinite(hb) ? (sign > 0 ? Math.min(zOut, hb - 0.3) : Math.max(zOut, -hb + 0.3)) : zOut;
+  };
+  // partitions
   for (let i = 0; i <= n; i++) {
     const x = x0 + i * cabinW;
-    const part = box(m, 0.08, ceiling, depth, wallMat, { x, y: ceiling / 2, z: (zIn + zOut) / 2, collide: true });
+    const zo = outAt(x); const depth = Math.abs(zo - zIn);
+    if (depth < 1.2) continue;
+    const part = box(m, 0.08, ceiling, depth, wallMat, { x, y: ceiling / 2, z: (zIn + zo) / 2, collide: true });
     part.castShadow = false; g.add(part);
   }
   for (let i = 0; i < n; i++) {
     const xa = x0 + i * cabinW, xb = xa + cabinW;
     const cx = (xa + xb) / 2;
+    const zOutC = sign > 0 ? Math.min(outAt(xa), outAt(xb), outAt(cx)) : Math.max(outAt(xa), outAt(xb), outAt(cx));
+    const depth = Math.abs(zOutC - zIn);
+    if (depth < 1.4) continue;                                  // too shallow to be a cabin here
+    // floor and ceiling strip for this cabin (the bake merges them)
+    if (floorMat) { const f = box(m, cabinW, 0.02, depth, floorMat, { x: cx, y: 0.013, z: (zIn + zOutC) / 2, collide: true }); f.castShadow = false; g.add(f); }
+    { const c = box(m, cabinW, 0.05, depth, ceilMat, { x: cx, y: ceiling + 0.025, z: (zIn + zOutC) / 2, collide: false }); c.castShadow = false; g.add(c); }
     // inboard wall with a door
     const w = wall(m, xa, zIn, xb, zIn, 0, ceiling, { gaps: [0.5], material: wallMat, panelled: depthClass !== 'third', doorW: 0.85, doorH: 2.0 });
     g.add(w);
@@ -43,8 +58,8 @@ function cabinBlock(m, g, { x0, x1, zIn, zOut, cabinW = 2.6, depthClass = 'third
     bed.position.set(xa + 0.55, 0, zIn + sign * (depth - 1.1)); bed.rotation.y = Math.PI / 2; g.add(bed);
     if (depthClass !== 'third' || i % 2 === 0) { const sink = makeSink(m, {}); sink.position.set(xb - 0.45, 0, zIn + sign * (depth - 0.35)); sink.rotation.y = sign > 0 ? Math.PI : 0; g.add(sink); }
     if (depthClass === 'first') { const wd = makeWardrobe(m, { w: 1.0, h: 2.0, d: 0.5 }); wd.position.set(xb - 0.6, 0, zIn + sign * 0.35); wd.rotation.y = sign > 0 ? 0 : Math.PI; g.add(wd); }
-    if (depthClass !== 'third') { const lamp = makeLamp(m, { kind: 'ceilingGlobe', power: 0.8, light: false }); lamp.position.set(cx, ceiling - 0.02, (zIn + zOut) / 2); g.add(lamp); }
-    else if (i % 3 === 0) { const lamp = makeLamp(m, { kind: 'bulkhead', power: 1, light: false }); lamp.position.set(cx, ceiling - 0.15, (zIn + zOut) / 2); g.add(lamp); }
+    if (depthClass !== 'third') { const lamp = makeLamp(m, { kind: 'ceilingGlobe', power: 0.8, light: false }); lamp.position.set(cx, ceiling - 0.02, (zIn + zOutC) / 2); g.add(lamp); }
+    else if (i % 3 === 0) { const lamp = makeLamp(m, { kind: 'bulkhead', power: 1, light: false }); lamp.position.set(cx, ceiling - 0.15, (zIn + zOutC) / 2); g.add(lamp); }
   }
 }
 
@@ -138,9 +153,7 @@ export function buildCabinsAndCorridors(spec, m, ctx) {
     const style = STYLES[blockCount % STYLES.length];
     const floorMat = tiled(m, cls === 'first' ? style.floor : cls === 'second' ? 'linoCorridor' : 'linoCorridor', cls === 'first' ? 2.0 : 0.9, undefined, cls === 'third' ? { color: new THREE.Color(0xe7a58f) } : {});
     for (const s of sides) {
-      const floor = box(m, x1 - x0, 0.02, Math.abs(s.zOut - s.zIn), floorMat, { x: (x0 + x1) / 2, y: 0.013, z: (s.zIn + s.zOut) / 2, collide: true }); floor.castShadow = false; g.add(floor);
-      const ceil = box(m, x1 - x0, 0.05, Math.abs(s.zOut - s.zIn), cls === 'third' ? 'whitePaintedSteel' : 'plasterWhite', { x: (x0 + x1) / 2, y: ceiling + 0.025, z: (s.zIn + s.zOut) / 2, collide: false }); ceil.castShadow = false; g.add(ceil);
-      cabinBlock(m, g, { x0, x1, zIn: s.zIn, zOut: s.zOut, cabinW, depthClass: cls === 'crew' ? 'third' : cls, ceiling, bunk, wallMat: cls === 'first' ? style.walls : 'whiteEnamel', nameBase: `${roomId}_${corId}_${s.zIn > 0 ? 's' : 'p'}`, interactables });
+      cabinBlock(m, g, { x0, x1, zIn: s.zIn, zOut: s.zOut, cabinW, depthClass: cls === 'crew' ? 'third' : cls, ceiling, bunk, wallMat: cls === 'first' ? style.walls : 'whiteEnamel', spec, deckY: r.y, floorMat, ceilMat: cls === 'third' ? 'whitePaintedSteel' : 'plasterWhite', nameBase: `${roomId}_${corId}_${s.zIn > 0 ? 's' : 'p'}`, interactables });
     }
     g.position.y = r.y;
     group.add(g);
@@ -265,7 +278,7 @@ export function buildCabinsAndCorridors(spec, m, ctx) {
     const g = new THREE.Group(); g.name = `Cabins.${id}`;
     const floor = box(m, r.x1 - r.x0, 0.02, r.z1 - r.z0, tiled(m, 'linoCorridor', 0.9), { x: (r.x0 + r.x1) / 2, y: 0.013, z: (r.z0 + r.z1) / 2, collide: true }); floor.castShadow = false; g.add(floor);
     const inner = id.endsWith('port') ? r.z1 : r.z0;
-    cabinBlock(m, g, { x0: r.x0, x1: r.x1, zIn: inner, zOut: id.endsWith('port') ? r.z0 : r.z1, cabinW: 3.0, depthClass: 'second', ceiling: 2.4, bunk: 'wood', wallMat: 'whiteEnamel', nameBase: id, interactables });
+    cabinBlock(m, g, { x0: r.x0, x1: r.x1, zIn: inner, zOut: id.endsWith('port') ? r.z0 : r.z1, cabinW: 3.0, depthClass: 'second', ceiling: 2.4, bunk: 'wood', wallMat: 'whiteEnamel', nameBase: id, interactables, spec, deckY: r.y });
     g.position.y = r.y; group.add(g);
   }
 
