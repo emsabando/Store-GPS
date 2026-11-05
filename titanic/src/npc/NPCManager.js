@@ -23,6 +23,7 @@ import {
 
 const CAPS = { low: 40, medium: 90, high: 160, ultra: 260 };
 const LOD_NEAR = 40, LOD_MID = 120, LOD_FAR = 250;
+const INDOOR_CULL = 55;                        // metres: indoor NPCs beyond this are not drawn
 const LOD_INTERVAL = [0, 0.1, 0.5, Infinity]; // tier → seconds between steps (0 = every frame)
 const GRID_CELL = 3;
 const SEP_RADIUS = 1.1;
@@ -432,7 +433,10 @@ export class NPCManager {
       const st = npc.state;
       st.dist2 = d2;
       st.lod = d2 < LOD_NEAR * LOD_NEAR ? 0 : d2 < LOD_MID * LOD_MID ? 1 : d2 < LOD_FAR * LOD_FAR ? 2 : 3;
-      const vis = st.lod < 3;
+      // People indoors are hidden by the hull and deckhouses from more than ~55 m away but still
+      // cost a dozen draw calls each; outdoor crowds keep the full range.
+      const indoors = !!(npc.data.area && npc.data.area.roomId);
+      const vis = st.lod < 3 && !(indoors && d2 > INDOOR_CULL * INDOOR_CULL);
       if (vis !== st.visible) { st.visible = vis; npc.group.visible = vis; }
       st.frozen = !vis;
       if (vis) this._gridInsert(npc);
