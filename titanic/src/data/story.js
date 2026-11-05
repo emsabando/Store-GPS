@@ -1,9 +1,8 @@
-// STUB — replaced by the narrative data engineer (ARCHITECTURE.md §2, §11).
-export const LOCATIONS = {
-  spawn_southampton: { name: 'First-class entrance, C Deck', deck: 'C', x: 40, y: 8.2, z: 12, yaw: Math.PI / 2 },
-  bow_tip: { name: 'The bow', deck: 'boat', x: 128, y: 13.5, z: 0, yaw: 0 },
-  stern_rail: { name: 'Stern rail, poop deck', deck: 'B', x: -128, y: 13.5, z: 0, yaw: Math.PI },
-};
+// Narrative data — LOCATIONS come from the ship spec's landmarks (ARCHITECTURE.md §2, §11).
+// STORY / DISCOVERIES / COLLECTIBLES are a minimal placeholder until the narrative data pass.
+import { SHIP } from './shipSpec.js';
+
+export const LOCATIONS = Object.fromEntries(Object.entries(SHIP.landmarks).map(([id, l]) => [id, { ...l, id }]));
 export const DISCOVERIES = [];
 export const COLLECTIBLES = [];
 export const STORY = {
