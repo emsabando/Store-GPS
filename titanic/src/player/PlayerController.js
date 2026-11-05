@@ -195,6 +195,16 @@ export class PlayerController {
     this._updateDeck(true);
   }
 
+  /** Teleport in WORLD space (exterior free-camera landmarks: the sea does not sink with the ship). */
+  teleportWorld(x, y, z, yaw = 0) {
+    this.position.set(x, y, z);
+    if (this.mode === 'free') this.position.y += 0;   // free mode holds the eye point itself
+    this.velocity.set(0, 0, 0);
+    this.yaw = yaw; this.pitch = 0;
+    this.sitting = false; this._seat = null; this._anchored = false; this._wasGround = false; this._jumpCooldown = 0; this.shake.t = 0;
+    this._updateDeck(true);
+  }
+
   teleportTo(loc) {
     if (!loc) return;
     this.teleportLocal(loc.x || 0, (loc.y ?? 0) + 0.1, loc.z || 0, loc.yaw || 0);

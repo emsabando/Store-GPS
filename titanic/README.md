@@ -77,6 +77,7 @@ Gamepads work too (left stick walk, right stick look, `A` jump, `X` interact, `Y
 npm run check                 # bundles src/main.js in memory and reports unresolved modules
 node --test tests/unit/*.mjs  # story / character / NPC data tests
 node tests/shot.mjs --locations=bridge,grand_staircase_A --w=1920 --h=1080 --out=screenshots/mine
+node tests/shot.mjs --locations="exterior_port_bow,120:5:40:2.27:-0.05" --sink=100 --at=poop_deck --calls   # free camera, sinking, draw-call stats
 npm run smoke -- --4k         # full build + headless 4K screenshots of every landmark
 ```
 

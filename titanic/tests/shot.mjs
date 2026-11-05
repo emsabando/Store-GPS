@@ -1,6 +1,10 @@
 /**
  * Quick view screenshots for iteration (no build step):
  *   node tests/shot.mjs --locations=a,b --time=18:20 --quality=high --w=960 --h=540 [--out=screenshots/quick] [--sink=120]
+ *   Options: --at=<spawn location> --watch=watchN --yaw=<rad> --pitch=<rad> (applied after each teleport)
+ *            --calls (draw-call breakdown) --pick (what the centre ray hits) --custom (window.__shotProbe())
+ *            --eval="js with `game`" (runs once before the locations) --helm (keep the pointer-lock prompt) --settle=ms
+ *   A location may be free-camera coordinates "x:y:z[:yaw:pitch]" (world metres, radians).
  * Serves dist/ (run `npx vite build` first), boots with ?autostart&manual, teleports, renders 2 frames, saves PNGs.
  */
 import http from 'node:http';
@@ -33,7 +37,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('response', (r) => { if (r.status() >= 400) errors.push(`HTTP ${r.status()} ${r.url()}`); });
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); if (args.verbose) console.log('[con]', m.text().slice(0, parseInt(args.conlen || '200', 10))); });
-const url = `http://127.0.0.1:${server.address().port}/?autostart=1&debug=1&nosink=1&manual=1&quality=${args.quality || 'high'}&res=native${args.time ? '&time=' + args.time : ''}${args.watch ? '&watch=' + args.watch : ''}`;
+const url = `http://127.0.0.1:${server.address().port}/?autostart=1&debug=1&nosink=1&manual=1&quality=${args.quality || 'high'}&res=native${args.time ? '&time=' + args.time : ''}${args.watch ? '&watch=' + args.watch : ''}${args.at ? '&at=' + args.at : ''}`;
 await page.goto(url, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__GAME_READY === true, null, { timeout: 300000, polling: 300 });
 if (args.time) await page.evaluate((t) => window.__game.setTime(t), String(args.time));

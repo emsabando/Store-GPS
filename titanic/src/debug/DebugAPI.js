@@ -9,13 +9,15 @@ export function installDebugAPI(game) {
         const l = ship.locations.get(target);
         if (!l) throw new Error(`unknown location ${target}`);
         player.setMode(l.mode || 'first');          // mode first: teleportLocal places the eye for free-fly
-        player.teleportLocal(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0);
+        if (l.mode === 'free' && typeof player.teleportWorld === 'function') player.teleportWorld(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0);   // exterior spots stay put while the ship sinks
+        else player.teleportLocal(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0);
         if (l.pitch !== undefined) player.pitch = l.pitch;
         return l;
       }
       const { x, y, z, yaw = 0, pitch = 0, mode } = target;
       player.setMode(mode || 'first');
-      player.teleportLocal(x, y, z, yaw);
+      if (mode === 'free' && typeof player.teleportWorld === 'function') player.teleportWorld(x, y, z, yaw);
+      else player.teleportLocal(x, y, z, yaw);
       player.pitch = pitch;
       return target;
     },
