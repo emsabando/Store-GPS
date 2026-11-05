@@ -54,6 +54,7 @@ const t0 = Date.now();
 await page.goto(url, { waitUntil: 'load', timeout: 120000 });
 await page.waitForFunction(() => window.__GAME_READY === true, null, { timeout: 600000, polling: 500 });
 console.log(`game ready in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+await page.evaluate(() => window.__game.frame(3)); // warm-up: first frames initialise post-processing and the environment
 const info = await page.evaluate(() => {
   const gl = window.__game.engine.renderer.getContext();
   const dbg = gl.getExtension('WEBGL_debug_renderer_info');
