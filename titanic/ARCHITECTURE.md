@@ -308,6 +308,19 @@ ui:photoMode, ui:mode, ui:requestPointerLock, ui:toggleView, audio:play`
 - `World.build()` syncs the sky dome before the first environment cube render; never render the
   env cube from an unsynced Preetham sky (NaN PMREM → black frame).
 - Room shells clamp `room.ceiling` to the deck spacing (`heightToNext − 0.2`).
+- `ship/Bake.js` runs after the builders: static meshes merge by material × collide × break-up
+  side × 150 m slab (`userData.part` is set on the merged meshes so `split()` still works); kept
+  objects (doors, interactables, dynamic props, boats, davits, lines, lights, instanced meshes)
+  are re-parented to `ship.group` and their own meshes collapsed per material. Door leaves stay
+  under their pivots. Builders may mark `userData.noBake` to opt out. `ship.lampMeshes` is
+  re-collected from baked meshes flagged `emissiveLamp` (flicker scales material emissive).
+- Builders are passed to `_merge(result, name, interior)` with explicit names: minification
+  mangles `fn.name`. Interior builders' meshes get `castShadow = false`.
+- Never give a material `transmission > 0` (three.js renders the whole opaque scene again into
+  the transmission buffer whenever one is on screen). Glass is alpha-blended instead.
+- `QualityPresets.shadowEveryN` / `engine.shadowEveryN`: the sun shadow map refreshes every N frames.
+- `tests/shot.mjs --calls` prints full / no-shadow / plain draw-call counts per location;
+  `--custom` with `--eval="window.__shotProbe = () => ({...})"` returns a custom probe per location.
 
 ## 11. Additional binding details (added by the integrator)
 
