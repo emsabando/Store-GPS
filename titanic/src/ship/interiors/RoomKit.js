@@ -64,7 +64,11 @@ export function roomShell(spec, m, ctx, room, opts = {}) {
   g.name = `Room.${room.id}`;
   const lights = [];
   const { x0, x1, z0, z1 } = room;
-  const y = 0, h = room.ceiling || 2.6;          // local: the group is lifted to room.y
+  // local: the group is lifted to room.y. The ceiling never rises into the deck above (the spec's
+  // 3.7 m public-room ceilings describe raised bays; the slab above still sits at heightToNext).
+  const deckAbove = (spec.decks || []).find((d) => Math.abs((d.y ?? -999) - (room.y ?? 0)) < 0.02);
+  const hMax = deckAbove && deckAbove.heightToNext ? deckAbove.heightToNext - 0.2 : 99;
+  const y = 0, h = Math.min(room.ceiling || 2.6, hMax);
   g.position.y = room.y;
   const floorMat = opts.floorMat || tiled(m, opts.floor || room.materials?.floor || 'linoCorridor', opts.floorRepeat || 2.0);
   const wallMat = opts.walls || room.materials?.walls || 'whiteEnamel';

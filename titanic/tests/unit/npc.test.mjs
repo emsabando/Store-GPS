@@ -16,10 +16,11 @@ function makeShip() {
     group: new Group(),
     quality: 'high',
     locations: new Map([
-      ['a', { id: 'a', x: 0, y: 19, z: 0, yaw: 0, deck: 'boat' }],
-      ['b', { id: 'b', x: 30, y: 19, z: 2, yaw: Math.PI, deck: 'boat' }],
-      ['far', { id: 'far', x: -100, y: 19, z: 0, yaw: 0, deck: 'boat' }],
-      ['below', { id: 'below', x: 0, y: 16.1, z: 0, yaw: 0, deck: 'A' }],
+      ['a', { id: 'a', x: 0, y: 19, z: 0, yaw: 0, deck: 'boat', standOff: 0 }],
+      ['b', { id: 'b', x: 30, y: 19, z: 2, yaw: Math.PI, deck: 'boat', standOff: 0 }],
+      ['far', { id: 'far', x: -100, y: 19, z: 0, yaw: 0, deck: 'boat', standOff: 0 }],
+      ['below', { id: 'below', x: 0, y: 16.1, z: 0, yaw: 0, deck: 'A', standOff: 0 }],
+      ['meet', { id: 'meet', x: 10, y: 19, z: 0, yaw: Math.PI / 2, deck: 'boat' }],
     ]),
     spec: {
       dims: { beamMoulded: 28.19 },
@@ -255,4 +256,15 @@ test('looks follow the contract shape per faction and chatter lines are short', 
     for (const line of pickLines(faction, Math.random, 3)) assert.ok(line.length <= 140);
   }
   assert.equal(findArea({ decks: [] }, 'boat', 1, 2).r, 6);
+});
+
+test('named NPCs wait 2.2 m ahead of a landmark, facing it, unless the location sets standOff', () => {
+  const { npcs } = setup();
+  const jack = npcs.spawnNamed('jack', 'meet');   // yaw π/2: forward = (cos, 0, -sin) = (0, 0, -1)
+  assert.ok(Math.abs(jack.group.position.x - 10) < 1e-9);
+  assert.ok(Math.abs(jack.group.position.z + 2.2) < 1e-9);
+  assert.ok(Math.abs(jack.state.yaw - (Math.PI / 2 + Math.PI)) < 1e-9, 'faces back toward the landmark');
+  npcs.moveNamed('jack', 'a');                    // standOff 0: exactly on the point
+  for (let f = 0; f < 60 * 40 && jack.state.behaviour === 'goto'; f++) npcs.update(1 / 60, new Vector3(200, 20, 0));
+  assert.ok(Math.hypot(jack.group.position.x, jack.group.position.z) < 0.5);
 });

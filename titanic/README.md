@@ -75,7 +75,7 @@ Gamepads work too (left stick walk, right stick look, `A` jump, `X` interact, `Y
 
 ```bash
 npm run check                 # bundles src/main.js in memory and reports unresolved modules
-node --test tests/unit/       # story / character / NPC data tests
+node --test tests/unit/*.mjs  # story / character / NPC data tests
 node tests/shot.mjs --locations=bridge,grand_staircase_A --w=1920 --h=1080 --out=screenshots/mine
 npm run smoke -- --4k         # full build + headless 4K screenshots of every landmark
 ```
