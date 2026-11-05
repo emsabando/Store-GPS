@@ -126,7 +126,8 @@ export class World {
     const focus = cam.clone().addScaledVector(ahead, 30);
     sun.target.position.copy(focus);
     sun.position.copy(focus).addScaledVector(this._sunDir, 400);
-    sun.castShadow = dayI > 0.02 && this.quality !== 'low';
+    // no sun shadows under cover: the shadow pass is a third of the frame indoors and lights nothing
+    sun.castShadow = dayI > 0.02 && this.quality !== 'low' && this._insideK < 0.9;
     if (this.ship && typeof this.ship.setDaylight === 'function') this.ship.setDaylight(dayI);
     // ocean
     const night = THREE.MathUtils.clamp(1 - THREE.MathUtils.smoothstep(el, -12, 2), 0, 1);

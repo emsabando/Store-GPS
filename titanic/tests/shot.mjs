@@ -51,7 +51,7 @@ if (args.sink) {
 }
 if (args.calls) await page.evaluate(() => { window.__shotCalls = true; });
 if (args.pick) await page.evaluate(() => { window.__shotPick = true; });
-if (args.eval) await page.evaluate((code) => { (new Function('game', code))(window.__game); }, String(args.eval));
+if (args.eval) await page.evaluate((code) => (new Function('game', code))(window.__game), String(args.eval));   // a returned promise is awaited
 for (const loc of locations) {
   const info = await page.evaluate(async ({ id, yaw, pitch }) => {
     try {
