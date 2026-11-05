@@ -161,6 +161,16 @@ export function tableCluster(m, makeTable, makeChair, { tableOpts = {}, chairOpt
 export function bakeGroup(group, { keep = (o) => !!(o.userData.door || o.userData.interactable || o.isInstancedMesh || o.isLight) } = {}) {
   group.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(group.matrixWorld).invert();
+  // seats (chairs, benches, sofas) are merged away below: keep their positions, group-local, for Ship.collectSeats
+  const seats = group.userData.seats || (group.userData.seats = []);
+  const _p = new THREE.Vector3(), _f = new THREE.Vector3();
+  group.traverse((o) => {
+    const st = o.userData && o.userData.seat;
+    if (!st || o === group) return;
+    _p.set(0, st.y || 0.45, 0).applyMatrix4(o.matrixWorld).applyMatrix4(inv);
+    _f.set(0, 0, 1).transformDirection(o.matrixWorld).transformDirection(inv);
+    seats.push({ x: _p.x, y: _p.y, z: _p.z, fx: _f.x, fz: _f.z, w: st.w || 0.5, slots: st.slots || 1 });
+  });
   const buckets = new Map();       // material uuid → { material, geoms, collide, emissive, shadow }
   const colliders = [];
   const kept = [];

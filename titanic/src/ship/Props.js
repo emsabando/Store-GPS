@@ -58,6 +58,11 @@ export function collider(group, w, h, d, { x = 0, y = h / 2, z = 0 } = {}) {
 }
 const group = (name) => { const g = new THREE.Group(); g.name = name; return g; };
 const LAMP_COLOR = 0xffa552;
+let _seatSeq = 0;
+/** Mark a seat prop as a player 'sit' interactable (the group is kept whole by the ship bake). */
+function seatInteractable(g, kind, data) {
+  g.userData.interactable = { id: `seat_${kind}_${_seatSeq++}`, type: 'sit', label: 'Sit down', data };
+}
 
 const _globeMats = new Map();   // one material per intensity so the ship bake can merge thousands of globes
 export function lampGlobe(m, r = 0.12, intensity = 2.5) {
@@ -82,18 +87,21 @@ export function makeChair(m, { style = 'dining', color } = {}) {
     g.add(box(m, 0.8, 0.5, 0.2, leather, { y: 0.65, z: -0.3 }));
     g.add(box(m, 0.18, 0.3, 0.7, leather, { y: 0.55, x: -0.31 }), box(m, 0.18, 0.3, 0.7, leather, { y: 0.55, x: 0.31 }));
     collider(g, 0.8, 0.9, 0.8);
+    g.userData.seat = { y: 0.42, w: 0.8 };
     return g;
   }
   if (style === 'stool') {
     g.add(cyl(m, 0.17, 0.17, 0.05, wood, { y: 0.45 }));
     for (const [x, z] of [[-0.1, -0.1], [0.1, -0.1], [-0.1, 0.1], [0.1, 0.1]]) g.add(cyl(m, 0.015, 0.02, 0.45, wood, { x, z }, 6));
     collider(g, 0.35, 0.5, 0.35);
+    g.userData.seat = { y: 0.45, w: 0.35 };
     return g;
   }
   if (style === 'bench3rd') {
     g.add(box(m, 1.6, 0.05, 0.35, 'pineDeck', { y: 0.45 }));
     g.add(box(m, 0.05, 0.45, 0.3, 'pineDeck', { x: -0.7, y: 0.225 }), box(m, 0.05, 0.45, 0.3, 'pineDeck', { x: 0.7, y: 0.225 }));
     collider(g, 1.6, 0.5, 0.35);
+    g.userData.seat = { y: 0.45, w: 1.6, slots: 3 };
     return g;
   }
   // dining / wicker / bentwood: seat, 4 legs, back
@@ -110,6 +118,7 @@ export function makeChair(m, { style = 'dining', color } = {}) {
     g.add(box(m, 0.42, 0.14, 0.03, wood, { y: 0.88, z: -0.2 }), box(m, 0.42, 0.06, 0.03, wood, { y: 0.66, z: -0.2 }));
   }
   collider(g, 0.5, 0.95, 0.5);
+  g.userData.seat = { y: 0.45, w: 0.46 };
   return g;
 }
 
@@ -437,6 +446,8 @@ export function makeBench(m, { length = 1.8, style = 'deck' } = {}) {
     g.add(box(m, 0.05, 0.5, 0.06, 'ironDark', { x: dx, y: 0.7, z: -0.25, rx: -0.25 }));
   }
   collider(g, length, 0.95, 0.5);
+  g.userData.seat = { y: 0.45, w: length, slots: Math.max(1, Math.round(length / 0.6)) };
+  seatInteractable(g, 'bench', { seatY: 0.45 });
   return g;
 }
 
@@ -455,6 +466,8 @@ export function makeDeckChair(m, { color } = {}) {
   back.rotation.x = -0.95 + Math.PI / 2;
   g.add(seat, back);
   collider(g, 0.62, 0.9, 1.3, { z: -0.1 });
+  g.userData.seat = { y: 0.4, w: 0.6 };
+  seatInteractable(g, 'deckchair', { seatY: 0.4, seatZ: 0.1 });
   return g;
 }
 
@@ -472,6 +485,8 @@ export function makeSofa(m, { w = 2, color } = {}) {
   g.add(box(m, 0.2, 0.3, 0.8, mat, { x: -w / 2 + 0.1, y: 0.57 }), box(m, 0.2, 0.3, 0.8, mat, { x: w / 2 - 0.1, y: 0.57 }));
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(cyl(m, 0.03, 0.04, 0.12, 'mahogany', { x: sx * (w / 2 - 0.1), z: sz * 0.38, y: 0.06 }, 6));
   collider(g, w, 0.9, 0.9);
+  g.userData.seat = { y: 0.42, w, slots: Math.max(1, Math.round(w / 0.7)) };
+  seatInteractable(g, 'sofa', { seatY: 0.42 });
   return g;
 }
 export function makeDesk(m, {} = {}) {

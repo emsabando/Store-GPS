@@ -128,6 +128,7 @@ export class Ship {
       ctx.log(`${name} ${(performance.now() - t0).toFixed(0)} ms`);
       i++;
     }
+    this.collectSeats();
     if (ctx.bake !== false) {
       onProgress(88, 'Bolting it all together');
       await nextFrame();
@@ -401,6 +402,46 @@ export class Ship {
     _groundRay.direction.set(0, -1, 0);
     const hit = bvh.raycastFirst(_groundRay, THREE.DoubleSide, 0, maxDrop);
     return hit ? hit.point.y : null;
+  }
+
+  /**
+   * Every seat prop (`userData.seat` on chairs, benches, sofas, deck chairs) as ship-local
+   * { x, y, z, yaw, w, slots, taken } — gathered before the bake merges the props away. NPCs with
+   * the 'sit' behaviour snap to the nearest free one.
+   */
+  collectSeats() {
+    this.group.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(this.group.matrixWorld).invert();
+    const p = new THREE.Vector3(), f = new THREE.Vector3();
+    const seats = [];
+    this.group.traverse((o) => {
+      const st = o.userData && o.userData.seat;
+      if (st) {
+        p.set(0, st.y || 0.45, 0).applyMatrix4(o.matrixWorld).applyMatrix4(inv);
+        f.set(0, 0, 1).transformDirection(o.matrixWorld).transformDirection(inv);
+        seats.push({ x: p.x, y: p.y, z: p.z, yaw: Math.atan2(-f.z, f.x), w: st.w || 0.5, slots: st.slots || 1, taken: 0, deck: this.deckAt(p.y) });
+      }
+      // seats recorded by RoomKit.bakeGroup before a room's props were merged (group-local)
+      for (const r of (o.userData && o.userData.seats) || []) {
+        p.set(r.x, r.y, r.z).applyMatrix4(o.matrixWorld).applyMatrix4(inv);
+        f.set(r.fx, 0, r.fz).transformDirection(o.matrixWorld).transformDirection(inv);
+        seats.push({ x: p.x, y: p.y, z: p.z, yaw: Math.atan2(-f.z, f.x), w: r.w, slots: r.slots, taken: 0, deck: this.deckAt(p.y) });
+      }
+    });
+    this.seats = seats;
+    this.log(`[ship] seats: ${seats.length}`);
+    return seats;
+  }
+
+  /** Nearest seat with a free slot within `radius` of (x, y, z) ship-local, or null. */
+  nearestFreeSeat(x, y, z, radius = 5) {
+    let best = null, bd = radius * radius;
+    for (const s of this.seats || []) {
+      if (s.taken >= s.slots || Math.abs(s.y - y) > 1.6) continue;
+      const dx = s.x - x, dz = s.z - z, d2 = dx * dx + dz * dz;
+      if (d2 < bd) { bd = d2; best = s; }
+    }
+    return best;
   }
 
   /**

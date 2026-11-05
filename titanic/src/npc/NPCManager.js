@@ -267,6 +267,18 @@ export class NPCManager {
     group.userData.npcId = id;
     group.userData.part = { x0: x, x1: x }; // so Ship.split() moves the whole NPC, not its limbs
     this._applyShadow(group, area);          // only people on open decks cast sun shadows
+    // sitters take the nearest free seat (slot spacing along the seat's width); none nearby → stand
+    let seat = null;
+    if (behaviour === 'sit' && this.ship && typeof this.ship.nearestFreeSeat === 'function') {
+      seat = this.ship.nearestFreeSeat(x, y, z, 6);
+      if (seat) {
+        const k = seat.taken++, n = seat.slots;
+        const along = n > 1 ? (-(seat.w / 2) + (seat.w / n) * (k + 0.5)) : 0;   // offset along the seat's width (its local x)
+        x = seat.x + Math.cos(seat.yaw + Math.PI / 2) * along; z = seat.z - Math.sin(seat.yaw + Math.PI / 2) * along;
+        yaw = seat.yaw;
+        group.position.set(x, y, z);
+      } else behaviour = 'stand';
+    }
     const interactable = { id, type: 'npc', label, data: { npcId: id, name, faction } };
     group.userData.interactable = interactable;
     group.traverse((o) => { if (o.isMesh) o.userData.interactable = interactable; });
@@ -276,7 +288,7 @@ export class NPCManager {
       id, group, character: ch,
       data: {
         name, faction, look, lines: lines || [], named, locationId, character, deck,
-        home: { x, y, z, yaw },
+        home: { x, y, z, yaw }, seat,
         area: area || findArea(this.spec, deck, x, z),
         behaviour, patrolB: { x, z }, speaker: named ? name : speakerName(faction, look.sex),
       },
@@ -316,6 +328,7 @@ export class NPCManager {
   despawn(id) {
     const npc = this._byId.get(id);
     if (!npc) return false;
+    if (npc.data && npc.data.seat) { npc.data.seat.taken = Math.max(0, npc.data.seat.taken - 1); npc.data.seat = null; }
     if (npc.group.parent) npc.group.parent.remove(npc.group);
     this._byId.delete(id);
     const i = this.all.indexOf(npc);
