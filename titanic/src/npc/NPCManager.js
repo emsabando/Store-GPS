@@ -419,7 +419,13 @@ export class NPCManager {
     this._frames.length = 0;
     const boatY = this._deckY('boat', 19);
     const slide = this._slideVelocity();
-    const ctx = this._ctx || (this._ctx = { rng: this.rng, panic: 0, trimDeg: 0, broken: false, lifeboats: null, boatY: 19, sep: _sep });
+    const ctx = this._ctx || (this._ctx = { rng: this.rng, panic: 0, trimDeg: 0, broken: false, lifeboats: null, boatY: 19, sep: _sep, groundOk: null });
+    // Walkable test for wander targets and steps: the floor under (x, z) must be the NPC's own deck,
+    // not a hatch cover, table or bunk (ship-local; null when the ship has no collision mesh yet).
+    if (!ctx.groundOk && this.ship && typeof this.ship.groundAt === 'function') {
+      const ship = this.ship;
+      ctx.groundOk = (x, z, y) => { const gy = ship.groundAt(x, y + 1.2, z, 3); return gy === null || Math.abs(gy - y) < 0.3; };
+    }
     ctx.panic = this.panic; ctx.trimDeg = this.trimDeg; ctx.broken = this.broken; ctx.boatY = boatY;
     ctx.lifeboats = this._lifeboats || (this.panic > 0 ? (this._lifeboats = this._lifeboatStations()) : null);
 

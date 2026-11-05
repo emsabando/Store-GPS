@@ -23,8 +23,9 @@ export const DEFAULT_LAUNCH_TIMES = (() => {
   return out;
 })();
 
-export const SWING_SECONDS = 10;
-export const LOWER_SECONDS = 60;
+// Real seconds at the default clock speed (0.5 game-min/s): ~2 game minutes to swing out, ~7 to lower.
+export const SWING_SECONDS = 4;
+export const LOWER_SECONDS = 14;
 export const ROW_SPEED = 0.6;
 
 const normId = (id) => String(id ?? '').replace(/^(life)?boat[_\-\s]?/i, '').replace(/^collapsible[_\-\s]?/i, '').toUpperCase();

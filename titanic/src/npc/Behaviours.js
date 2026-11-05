@@ -209,14 +209,28 @@ export function stepStand(npc, ctx, dt) {
 export function stepWander(npc, ctx, dt) {
   const st = npc.state;
   if (st.wait > 0) { st.wait -= dt; idle(npc); return; }
+  const pos = npc.group.position;
   if (!st.hasTarget) {
-    randomPointInArea(npc.data.area, ctx.rng, st.target);
+    // a few tries for a target whose floor is the deck itself (hatches, tables and bunks are not)
+    for (let k = 0; k < 6; k++) {
+      randomPointInArea(npc.data.area, ctx.rng, st.target);
+      if (!ctx.groundOk || ctx.groundOk(st.target.x, st.target.z, pos.y)) break;
+    }
     st.hasTarget = true;
     st.stuck = 0;
   }
-  const before = npc.group.position.x + npc.group.position.z;
+  const px = pos.x, pz = pos.z;
+  const before = pos.x + pos.z;
   const arrived = moveToward(npc, st.target.x, st.target.z, st.walkSpeed, dt, ctx.sep);
-  const after = npc.group.position.x + npc.group.position.z;
+  if (ctx.groundOk && (pos.x !== px || pos.z !== pz) && !ctx.groundOk(pos.x, pos.z, pos.y)) {
+    // stepped onto something: back off, pick another way after a short pause
+    pos.x = px; pos.z = pz;
+    st.hasTarget = false;
+    st.wait = 0.4 + ctx.rng() * 0.8;
+    idle(npc);
+    return;
+  }
+  const after = pos.x + pos.z;
   if (Math.abs(after - before) < 1e-4 * Math.max(1, dt * 60)) st.stuck += dt; else st.stuck = 0;
   if (arrived || st.stuck > 2.5) {
     st.hasTarget = false;

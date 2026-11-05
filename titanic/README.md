@@ -83,7 +83,9 @@ npm run smoke -- --4k         # full build + headless 4K screenshots of every la
 ```
 
 The headless harness uses the pre-installed Playwright Chromium with SwiftShader, so it is
-slow (about a second per 1080p frame) but needs no GPU.
+slow (about a second per 1080p frame) but needs no GPU. Audio cannot be checked headlessly:
+browsers only start WebAudio after a click, so the ambience, footsteps and the band need a real
+browser session (click the viewport once).
 
 ## Layout
 
