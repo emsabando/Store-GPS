@@ -250,9 +250,26 @@ export class Ship {
   setPower(p) {
     this._power = Math.max(0, Math.min(1, p));
     for (const l of this.lightsList) l.intensity = (l.userData.baseIntensity ?? 1) * this._power;
+    this._applyEmissive();
+  }
+
+  /** 0 = night … 1 = full daylight: materials flagged `userData.daylightDim` (porthole glass) fade out by day. */
+  setDaylight(d) {
+    const v = Math.max(0, Math.min(1, +d || 0));
+    if (Math.abs(v - (this._daylight ?? -1)) < 0.01) return;
+    this._daylight = v;
+    this._applyEmissive();
+  }
+
+  _applyEmissive() {
+    const day = this._daylight ?? 0;
     for (const o of this.lampMeshes) {
       const mats = Array.isArray(o.material) ? o.material : [o.material];
-      for (const m of mats) if ('emissiveIntensity' in m) m.emissiveIntensity = (m.userData.baseEmissive ?? 1) * this._power;
+      for (const m of mats) {
+        if (!('emissiveIntensity' in m)) continue;
+        const dim = m.userData.daylightDim ? 1 - 0.95 * day : 1;
+        m.emissiveIntensity = (m.userData.baseEmissive ?? 1) * this._power * dim;
+      }
     }
   }
 

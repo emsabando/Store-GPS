@@ -122,6 +122,7 @@ export class World {
     sun.target.position.copy(focus);
     sun.position.copy(focus).addScaledVector(this._sunDir, 400);
     sun.castShadow = dayI > 0.02 && this.quality !== 'low';
+    if (this.ship && typeof this.ship.setDaylight === 'function') this.ship.setDaylight(dayI);
     // ocean
     const night = THREE.MathUtils.clamp(1 - THREE.MathUtils.smoothstep(el, -12, 2), 0, 1);
     this.ocean.update(dt, { cameraPos: cam, sunDir: this._sunDir, sunColor: sun.color, sunIntensity: dayI, horizonColor: pal.horizon, zenithColor: pal.zenith, night });

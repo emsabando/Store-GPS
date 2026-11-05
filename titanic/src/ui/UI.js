@@ -100,7 +100,8 @@ export class UI {
     show(this.gameover, mode === 'gameover');
     show(this.credits, mode === 'credits');
     this.panels.setMode(mode);
-    this.hud.setVisible(['playing', 'dialogue', 'map', 'journal', 'time', 'paused'].includes(mode) && mode !== 'photo');
+    // The HUD (compass, prompt, log tray) stays for play and dialogue; panels and the pause card get a clean backdrop.
+    this.hud.setVisible(['playing', 'dialogue'].includes(mode));
     if (mode === 'menu') { this.menu.querySelector('.take-helm').classList.toggle('hidden', !localStorage.getItem(SAVE_KEY)); this._welcome(); }
     if (mode === 'gameover') this.bus.emit('audio:play', { id: 'bell' });
   }

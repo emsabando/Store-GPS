@@ -273,6 +273,7 @@ export function buildHull(spec, materials, ctx) {
     const glass = new THREE.CircleGeometry(0.19, hi ? 20 : 12);
     const ringMesh = new THREE.InstancedMesh(ring, materials.get('brass'), transforms.length);
     const glassMat = materials.clone('glassFrosted', { emissive: new THREE.Color(0xffa552), emissiveIntensity: 1.6, transparent: false, opacity: 1, roughness: 0.4 });
+    glassMat.userData.daylightDim = true;   // porthole glow fades out by day (Ship.setDaylight)
     glassMat.name = 'hull.portholeGlass';
     const glassMesh = new THREE.InstancedMesh(glass, glassMat, transforms.length);
     glassMesh.userData.emissiveLamp = true;
