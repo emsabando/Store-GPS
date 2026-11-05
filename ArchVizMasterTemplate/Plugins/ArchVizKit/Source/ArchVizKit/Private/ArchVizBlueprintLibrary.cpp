@@ -52,7 +52,7 @@ bool UArchVizBlueprintLibrary::SetLanguage(const FString& Culture)
 
 void UArchVizBlueprintLibrary::TakeScreenshot(bool bWithUI)
 {
-	FScreenshotRequest::RequestScreenshot(bWithUI);
+	FScreenshotRequest::RequestScreenshot(FString(), bWithUI, /*bAddFilenameSuffix*/ true); // ScreenShot00001.png, 00002...
 }
 
 FText UArchVizBlueprintLibrary::FormatPrice(int64 Price, const FString& CurrencyCode)

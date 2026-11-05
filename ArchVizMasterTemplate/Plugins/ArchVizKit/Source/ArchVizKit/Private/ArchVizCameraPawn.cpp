@@ -87,6 +87,13 @@ void AArchVizCameraPawn::Tick(float DeltaSeconds)
 		{
 			Target.Yaw += AutoRotateSpeed * DeltaSeconds;
 		}
+		// Keep yaw small so float precision holds over days of kiosk turntable.
+		if (FMath::Abs(Target.Yaw) > 3600.f)
+		{
+			const float Wrap = 360.f * FMath::RoundToFloat(Target.Yaw / 360.f);
+			Target.Yaw -= Wrap;
+			Current.Yaw -= Wrap;
+		}
 		Current.Pivot = FMath::VInterpTo(Current.Pivot, Target.Pivot, DeltaSeconds, Smoothing);
 		Current.Yaw = FMath::FInterpTo(Current.Yaw, Target.Yaw, DeltaSeconds, Smoothing);
 		Current.Pitch = FMath::FInterpTo(Current.Pitch, Target.Pitch, DeltaSeconds, Smoothing);
@@ -127,7 +134,8 @@ void AArchVizCameraPawn::ClampTarget()
 
 	Target.Pitch = FMath::Clamp(Target.Pitch, MinPitch, MaxPitch);
 	Target.Arm = FMath::Clamp(Target.Arm, MinArmLength, MaxArmLength);
-	if (PivotBounds.IsValid)
+	// FBox::IsValid is not editable in the Details panel, so test the extent instead.
+	if (PivotBounds.Max.X > PivotBounds.Min.X && PivotBounds.Max.Y > PivotBounds.Min.Y)
 	{
 		Target.Pivot = PivotBounds.GetClosestPointTo(Target.Pivot);
 	}
@@ -183,6 +191,7 @@ void AArchVizCameraPawn::FlyTo(FVector InPivot, float Yaw, float Pitch, float Ar
 {
 	// Authored destinations are not clamped: a street-level hero shot may look up,
 	// a drone shot may sit beyond the user zoom limit. Limits apply to user input only.
+	const bool bWasLookAround = bLookAround;
 	bLookAround = bInLookAround;
 
 	To.Pivot = InPivot;
@@ -204,7 +213,8 @@ void AArchVizCameraPawn::FlyTo(FVector InPivot, float Yaw, float Pitch, float Ar
 	From = Current;
 	TransitionTime = 0.f;
 	TransitionDuration = Duration;
-	TransitionArc = FlightArc * static_cast<float>(FVector::Dist(From.Pivot, To.Pivot));
+	// No pull-back between interior viewpoints: it would swing the lens through walls.
+	TransitionArc = (bWasLookAround && bInLookAround) ? 0.f : FlightArc * static_cast<float>(FVector::Dist(From.Pivot, To.Pivot));
 	bTransitioning = true;
 }
 

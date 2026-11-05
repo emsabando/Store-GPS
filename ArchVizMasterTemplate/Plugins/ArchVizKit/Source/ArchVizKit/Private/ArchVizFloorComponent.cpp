@@ -12,6 +12,10 @@ UArchVizFloorComponent::UArchVizFloorComponent()
 void UArchVizFloorComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	if (const AActor* Owner = GetOwner())
+	{
+		bOriginalActorCollision = Owner->GetActorEnableCollision();
+	}
 	if (UArchVizSceneSubsystem* Scene = GetWorld()->GetSubsystem<UArchVizSceneSubsystem>())
 	{
 		Scene->RegisterFloor(this);
@@ -56,5 +60,5 @@ void UArchVizFloorComponent::ApplySection(bool bCutActive, FName CutBuilding, in
 	}
 
 	Owner->SetActorHiddenInGame(!bVisible);
-	Owner->SetActorEnableCollision(bVisible);
+	Owner->SetActorEnableCollision(bVisible && bOriginalActorCollision);
 }

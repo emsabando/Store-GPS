@@ -9,7 +9,7 @@
 
 namespace
 {
-	UArchVizSceneSubsystem* GetScene(const UActorComponent* Component)
+	UArchVizSceneSubsystem* FindArchVizScene(const UActorComponent* Component)
 	{
 		const UWorld* World = Component ? Component->GetWorld() : nullptr;
 		return World ? World->GetSubsystem<UArchVizSceneSubsystem>() : nullptr;
@@ -50,7 +50,7 @@ void UArchVizUnitComponent::BeginPlay()
 
 	UpdateVisibility();
 
-	if (UArchVizSceneSubsystem* Scene = GetScene(this))
+	if (UArchVizSceneSubsystem* Scene = FindArchVizScene(this))
 	{
 		Scene->RegisterUnit(this);
 	}
@@ -58,7 +58,7 @@ void UArchVizUnitComponent::BeginPlay()
 
 void UArchVizUnitComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (UArchVizSceneSubsystem* Scene = GetScene(this))
+	if (UArchVizSceneSubsystem* Scene = FindArchVizScene(this))
 	{
 		Scene->UnregisterUnit(this);
 	}
@@ -170,7 +170,7 @@ FBox UArchVizUnitComponent::GetUnitBounds() const
 
 void UArchVizUnitComponent::HandleClicked(UPrimitiveComponent* /*TouchedComponent*/, FKey /*ButtonPressed*/)
 {
-	if (UArchVizSceneSubsystem* Scene = GetScene(this))
+	if (UArchVizSceneSubsystem* Scene = FindArchVizScene(this))
 	{
 		Scene->NotifyUnitClicked(UnitId);
 	}
@@ -178,7 +178,7 @@ void UArchVizUnitComponent::HandleClicked(UPrimitiveComponent* /*TouchedComponen
 
 void UArchVizUnitComponent::HandleTouch(ETouchIndex::Type /*FingerIndex*/, UPrimitiveComponent* /*TouchedComponent*/)
 {
-	if (UArchVizSceneSubsystem* Scene = GetScene(this))
+	if (UArchVizSceneSubsystem* Scene = FindArchVizScene(this))
 	{
 		Scene->NotifyUnitClicked(UnitId);
 	}
@@ -186,7 +186,7 @@ void UArchVizUnitComponent::HandleTouch(ETouchIndex::Type /*FingerIndex*/, UPrim
 
 void UArchVizUnitComponent::HandleCursorOver(UPrimitiveComponent* /*TouchedComponent*/)
 {
-	if (UArchVizSceneSubsystem* Scene = GetScene(this))
+	if (UArchVizSceneSubsystem* Scene = FindArchVizScene(this))
 	{
 		Scene->NotifyUnitHovered(UnitId, true);
 	}
@@ -194,7 +194,7 @@ void UArchVizUnitComponent::HandleCursorOver(UPrimitiveComponent* /*TouchedCompo
 
 void UArchVizUnitComponent::HandleCursorOut(UPrimitiveComponent* /*TouchedComponent*/)
 {
-	if (UArchVizSceneSubsystem* Scene = GetScene(this))
+	if (UArchVizSceneSubsystem* Scene = FindArchVizScene(this))
 	{
 		Scene->NotifyUnitHovered(UnitId, false);
 	}

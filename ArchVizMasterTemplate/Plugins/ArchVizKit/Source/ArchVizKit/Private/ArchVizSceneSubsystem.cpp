@@ -126,6 +126,10 @@ void UArchVizSceneSubsystem::RegisterPOI(AArchVizPOI* POI)
 	{
 		return;
 	}
+	if (POI->PoiId.IsNone())
+	{
+		UE_LOG(LogArchViz, Warning, TEXT("POI %s has no PoiId; bridge commands and Back cannot reach it."), *GetNameSafe(POI));
+	}
 	POIs.AddUnique(POI);
 	POI->SetLabelVisible(bPOIsVisible);
 }
@@ -222,6 +226,10 @@ TArray<AArchVizCameraShot*> UArchVizSceneSubsystem::GetShotsInGroup(FName Group)
 
 AArchVizPOI* UArchVizSceneSubsystem::FindPOI(FName PoiId) const
 {
+	if (PoiId.IsNone())
+	{
+		return nullptr; // "no POI" must not match a POI that was left without an id
+	}
 	for (const TWeakObjectPtr<AArchVizPOI>& Weak : POIs)
 	{
 		AArchVizPOI* POI = Weak.Get();
@@ -268,7 +276,7 @@ TArray<int32> UArchVizSceneSubsystem::GetFloors(FName Building) const
 	for (const TWeakObjectPtr<UArchVizFloorComponent>& Weak : Floors)
 	{
 		const UArchVizFloorComponent* Floor = Weak.Get();
-		if (Floor && Floor->Role == EArchVizSectionRole::Structure && Floor->MatchesBuilding(Building))
+		if (Floor && Floor->Role == EArchVizSectionRole::Structure && (Building.IsNone() || Floor->MatchesBuilding(Building)))
 		{
 			Result.AddUnique(Floor->Floor);
 		}

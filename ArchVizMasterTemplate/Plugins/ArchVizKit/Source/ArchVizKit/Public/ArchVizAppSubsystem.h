@@ -243,6 +243,7 @@ private:
 	void EnsureInteriorLoaded(FName UnitId);
 	void UnloadInterior();
 	void ResetSession();
+	void GoHomeInternal(bool bPushHistory);
 	void LeaveFirstPersonIfActive();
 	void FrameUnit(FName UnitId) const;
 	void CheckIdle();
@@ -280,6 +281,7 @@ private:
 
 	// Idle
 	double LastActivityTime = 0.0;
+	double IdleStartTime = 0.0;
 	bool bIsIdle = false;
 	FTimerHandle IdleTimer;
 };

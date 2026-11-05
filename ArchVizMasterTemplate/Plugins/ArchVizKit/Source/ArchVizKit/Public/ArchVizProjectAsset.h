@@ -7,6 +7,7 @@
 
 class UDataTable;
 class APawn;
+class UUserWidget;
 
 /** "5 / minutes to the metro" style facts on the home screen. */
 USTRUCT(BlueprintType)
@@ -142,6 +143,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Experience")
 	TSoftClassPtr<APawn> FirstPersonPawnClass;
+
+	/** Your WBP_AppRoot. ArchVizPlayerController adds it to the viewport at start. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Experience")
+	TSoftClassPtr<UUserWidget> RootWidget;
 
 	/** Seconds without input before the kiosk attract loop starts. 0 disables. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Experience", meta = (ClampMin = 0))

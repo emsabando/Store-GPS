@@ -142,6 +142,15 @@ Back or Exit returns to the exact orbit view.
 - **Pixel Streaming**: see [BRIDGE_PROTOCOL.md](BRIDGE_PROTOCOL.md). Two Blueprint nodes connect it.
 - Test each quality preset on the target GPU. Defaults: Performance = scalability 1 at 67 %,
   Balanced = 2 at 85 %, High = 3, Cinematic = 4.
+- **Packaging**: the project asset is referenced only from config, and the cooker can skip assets
+  referenced that way, which leaves a packaged build with an empty inventory. Add this to
+  `Config/DefaultGame.ini`, adjusting the path to wherever your project assets live. The tables
+  and plan textures it references are then cooked with it.
+
+  ```ini
+  [/Script/Engine.AssetManagerSettings]
+  +PrimaryAssetTypesToScan=(PrimaryAssetType="ArchVizProject",AssetBaseClass="/Script/ArchVizKit.ArchVizProjectAsset",bHasBlueprintClasses=False,bIsEditorOnly=False,Directories=((Path="/Game/ArchViz")),Rules=(CookRule=AlwaysCook))
+  ```
 
 ## 10. Live inventory and leads
 
@@ -165,7 +174,7 @@ paste:
 > DataTables with row structs ArchVizUnitRow and ArchVizUnitTypeRow; create DA_Project
 > (ArchVizProjectAsset) referencing them and set it in Project Settings > ArchViz Kit;
 > create BP_UnitVolume (StaticMesh + ArchVizUnitComponent); create M_UnitOverlay as described in
-> section 4; create a GameMode BP using ArchVizCameraPawn and ArchVizPlayerController; then build
+> section 4; set ArchVizGameMode as the default GameMode; then build
 > the widgets in docs/UI_KIT.md as WBP_ assets bound to ArchVizAppSubsystem, and report what you
 > could not create.
 
@@ -183,3 +192,4 @@ paste:
 - [ ] Idle timeout and reset behaviour agreed with the sales office
 - [ ] Lead webhook tested end to end; inventory sync tested with a status change
 - [ ] Quality presets profiled on the target hardware
+- [ ] Packaged build tested: inventory loads (Asset Manager rule from section 9 in place)

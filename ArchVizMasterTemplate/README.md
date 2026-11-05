@@ -62,6 +62,7 @@ table and an HTML front end over Pixel Streaming.
 | `ArchVizSceneSubsystem` | World subsystem | Things placed in the level register here; decides which units glow; section cut; POI labels |
 | `ArchVizAppSubsystem` | GameInstance subsystem | Modes (Masterplan, Building, Floor, Unit, Interior, Amenity, FirstPerson), back stack, interior streaming, idle, bridge, leads |
 | `ArchVizCameraPawn` | Pawn | Smoothed orbit, pan and zoom; eased fly-to with a pull-back arc; look-around for interiors; limits; turntable |
+| `ArchVizGameMode` | GameMode | Default pawn and controller, so any level works with no setup |
 | `ArchVizPlayerController` | PlayerController | Mouse and touch with no input assets (drag orbit, pinch zoom, two-finger pan, tap to select) |
 | `ArchVizCameraShot` | Actor | Named camera you pilot in the editor; used by buildings, POIs, viewpoints and tours |
 | `ArchVizUnitComponent` | Component | Makes an actor the clickable, highlightable shape of one apartment |
@@ -80,8 +81,9 @@ table and an HTML front end over Pixel Streaming.
    `Data/Units.csv` and `Data/UnitTypes.csv` as DataTables with row structs **ArchVizUnitRow** and
    **ArchVizUnitTypeRow**, and assign them.
 4. Point **Project Settings > Plugins > ArchViz Kit > Project Asset** at it.
-5. In your GameMode: Default Pawn = `ArchVizCameraPawn` (or a BP child), Player Controller =
-   `ArchVizPlayerController`.
+5. Set **Project Settings > Maps & Modes > Default GameMode** to `ArchVizGameMode`, which brings
+   the orbit camera and mouse/touch controller. Set your `WBP_AppRoot` as **Root Widget** in the
+   project asset; the controller adds it to the screen at start.
 6. Place the scene pieces: environment, camera shots, POIs, unit volumes and floor tags. Then build
    the widgets. Both steps are in [docs/PROJECT_SETUP.md](docs/PROJECT_SETUP.md).
 

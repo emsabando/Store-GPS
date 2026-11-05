@@ -42,8 +42,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "ArchViz|Inventory")
 	TArray<FArchVizUnitRow> GetAllUnits() const;
 
-	/** Stateless query: units matching the filter, sorted as the filter asks. */
-	UFUNCTION(BlueprintCallable, Category = "ArchViz|Inventory")
+	/** Stateless query: units matching the filter, sorted as the filter asks. Exec node: run it once, cache the array. */
+	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "ArchViz|Inventory")
 	TArray<FArchVizUnitRow> QueryUnits(const FArchVizUnitFilter& Filter) const;
 
 	UFUNCTION(BlueprintPure, Category = "ArchViz|Inventory")

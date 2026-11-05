@@ -2,6 +2,9 @@
 
 #include "ArchVizAppSubsystem.h"
 #include "ArchVizCameraPawn.h"
+#include "ArchVizInventorySubsystem.h"
+#include "ArchVizProjectAsset.h"
+#include "Blueprint/UserWidget.h"
 #include "ArchVizPOI.h"
 #include "ArchVizSceneSubsystem.h"
 #include "ArchVizUnitComponent.h"
@@ -28,6 +31,17 @@ void AArchVizPlayerController::BeginPlay()
 		InputMode.SetHideCursorDuringCapture(false);
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		SetInputMode(InputMode);
+
+		const UGameInstance* GameInstance = GetGameInstance();
+		const UArchVizInventorySubsystem* Inventory = GameInstance ? GameInstance->GetSubsystem<UArchVizInventorySubsystem>() : nullptr;
+		const UArchVizProjectAsset* Project = Inventory ? Inventory->GetProject() : nullptr;
+		if (UClass* WidgetClass = Project ? Project->RootWidget.LoadSynchronous() : nullptr)
+		{
+			if (UUserWidget* Root = CreateWidget<UUserWidget>(this, WidgetClass))
+			{
+				Root->AddToViewport();
+			}
+		}
 	}
 }
 
@@ -35,16 +49,16 @@ void AArchVizPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	AArchVizCameraPawn* Camera = Cast<AArchVizCameraPawn>(GetPawn());
-	if (!Camera || !bCameraInputEnabled)
+	AArchVizCameraPawn* CameraPawn = Cast<AArchVizCameraPawn>(GetPawn());
+	if (!CameraPawn || !bCameraInputEnabled)
 	{
 		return;
 	}
-	TickMouse(Camera);
-	TickTouch(Camera);
+	TickMouse(CameraPawn);
+	TickTouch(CameraPawn);
 }
 
-void AArchVizPlayerController::TickMouse(AArchVizCameraPawn* Camera)
+void AArchVizPlayerController::TickMouse(AArchVizCameraPawn* CameraPawn)
 {
 	float MouseX = 0.f, MouseY = 0.f;
 	if (!GetMousePosition(MouseX, MouseY))
@@ -76,12 +90,12 @@ void AArchVizPlayerController::TickMouse(AArchVizCameraPawn* Camera)
 			const bool bPan = bPanButton || IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
 			if (bPan)
 			{
-				Camera->AddPanInput(Delta);
+				CameraPawn->AddPanInput(Delta);
 			}
 			else
 			{
 				const float Pitch = static_cast<float>(bInvertPitch ? Delta.Y : -Delta.Y) * MouseOrbitSpeed;
-				Camera->AddOrbitInput(static_cast<float>(Delta.X) * MouseOrbitSpeed, Pitch);
+				CameraPawn->AddOrbitInput(static_cast<float>(Delta.X) * MouseOrbitSpeed, Pitch);
 			}
 			NotifyActivity();
 		}
@@ -95,17 +109,17 @@ void AArchVizPlayerController::TickMouse(AArchVizCameraPawn* Camera)
 
 	if (WasInputKeyJustPressed(EKeys::MouseScrollUp))
 	{
-		Camera->AddZoomInput(1.f);
+		CameraPawn->AddZoomInput(1.f);
 		NotifyActivity();
 	}
 	if (WasInputKeyJustPressed(EKeys::MouseScrollDown))
 	{
-		Camera->AddZoomInput(-1.f);
+		CameraPawn->AddZoomInput(-1.f);
 		NotifyActivity();
 	}
 }
 
-void AArchVizPlayerController::TickTouch(AArchVizCameraPawn* Camera)
+void AArchVizPlayerController::TickTouch(AArchVizCameraPawn* CameraPawn)
 {
 	bool bDown[2] = { false, false };
 	FVector2D Pos[2];
@@ -123,8 +137,8 @@ void AArchVizPlayerController::TickTouch(AArchVizCameraPawn* Camera)
 		if (bTouchWasDown[0] && bTouchWasDown[1])
 		{
 			const FVector2D LastCenter = (LastTouchPos[0] + LastTouchPos[1]) * 0.5;
-			Camera->AddZoomInput((Distance - LastPinchDistance) / PinchPixelsPerStep);
-			Camera->AddPanInput(Center - LastCenter);
+			CameraPawn->AddZoomInput((Distance - LastPinchDistance) / PinchPixelsPerStep);
+			CameraPawn->AddPanInput(Center - LastCenter);
 			NotifyActivity();
 		}
 		LastPinchDistance = Distance;
@@ -153,7 +167,7 @@ void AArchVizPlayerController::TickTouch(AArchVizCameraPawn* Camera)
 			if (bTouchDragging && !Delta.IsNearlyZero())
 			{
 				const float Pitch = static_cast<float>(bInvertPitch ? Delta.Y : -Delta.Y) * TouchOrbitSpeed;
-				Camera->AddOrbitInput(static_cast<float>(Delta.X) * TouchOrbitSpeed, Pitch);
+				CameraPawn->AddOrbitInput(static_cast<float>(Delta.X) * TouchOrbitSpeed, Pitch);
 				NotifyActivity();
 			}
 		}

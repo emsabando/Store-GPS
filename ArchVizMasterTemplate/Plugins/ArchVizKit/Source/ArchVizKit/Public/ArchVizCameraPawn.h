@@ -88,7 +88,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ArchViz|Camera|Limits")
 	float MaxArmLength = 60000.f;
 
-	/** Keep the pivot inside the site. Ignored while invalid (zero size). */
+	/** Keep the pivot inside the site. Ignored until Max is greater than Min in X and Y (the default is off). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ArchViz|Camera|Limits")
 	FBox PivotBounds = FBox(ForceInit);
 

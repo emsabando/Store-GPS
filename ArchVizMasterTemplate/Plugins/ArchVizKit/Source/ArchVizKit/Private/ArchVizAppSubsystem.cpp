@@ -14,6 +14,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/LatentActionManager.h"
 #include "Engine/World.h"
+#include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerController.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
@@ -203,8 +204,9 @@ void UArchVizAppSubsystem::ApplySceneForState(const FArchVizAppState& OldState)
 	{
 		EnsureInteriorLoaded(State.UnitId);
 	}
-	else if (OldState.Mode == EArchVizMode::Interior)
+	else if (State.Mode != EArchVizMode::FirstPerson)
 	{
+		// First person may have been entered from inside the show-flat: keep it loaded until the walker leaves.
 		UnloadInterior();
 	}
 }
@@ -262,11 +264,16 @@ void UArchVizAppSubsystem::FrameUnit(FName UnitId) const
 
 void UArchVizAppSubsystem::GoHome()
 {
+	GoHomeInternal(State.Mode != EArchVizMode::Masterplan);
+}
+
+void UArchVizAppSubsystem::GoHomeInternal(bool bPushHistory)
+{
 	LeaveFirstPersonIfActive();
 
 	FArchVizAppState NewState;
 	NewState.ShotId = TEXT("Home");
-	SetState(NewState, State.Mode != EArchVizMode::Masterplan);
+	SetState(NewState, bPushHistory);
 	FlyToShotId(NewState.ShotId);
 }
 
@@ -276,7 +283,7 @@ void UArchVizAppSubsystem::Back()
 	{
 		if (State.Mode != EArchVizMode::Masterplan)
 		{
-			GoHome();
+			GoHomeInternal(false); // pushing here would make Back bounce between two screens
 		}
 		return;
 	}
@@ -483,8 +490,7 @@ void UArchVizAppSubsystem::ExitFirstPerson()
 		Back(); // restores the screen and orbit view from before first person
 		return;
 	}
-	LeaveFirstPersonIfActive();
-	GoHome();
+	GoHomeInternal(false);
 }
 
 void UArchVizAppSubsystem::LeaveFirstPersonIfActive()
@@ -581,7 +587,7 @@ void UArchVizAppSubsystem::UnloadInterior()
 	Latent.CallbackTarget = this;
 	Latent.ExecutionFunction = NAME_None;
 	Latent.UUID = ++LatentCounter;
-	Latent.Linkage = 0;
+	Latent.Linkage = INDEX_NONE; // nothing to resume
 	UGameplayStatics::UnloadStreamLevelBySoftObjectPtr(GetCurrentWorld(), LoadedInterior, Latent, false);
 	LoadedInterior.Reset();
 }
@@ -618,10 +624,27 @@ void UArchVizAppSubsystem::NotifyUserActivity()
 
 void UArchVizAppSubsystem::CheckIdle()
 {
+	// UMG clicks are consumed by Slate and never reach the player controller, so also use
+	// Slate's record of the last real input (mouse, touch, keys, Pixel Streaming input).
+	double LastInput = LastActivityTime;
+	if (FSlateApplication::IsInitialized())
+	{
+		LastInput = FMath::Max(LastInput, FSlateApplication::Get().GetLastUserInteractionTime());
+	}
+
+	if (bIsIdle)
+	{
+		if (LastInput > IdleStartTime)
+		{
+			NotifyUserActivity();
+		}
+		return;
+	}
+
 	const UArchVizInventorySubsystem* Inventory = GetInventory();
 	const UArchVizProjectAsset* Project = Inventory ? Inventory->GetProject() : nullptr;
 	const float Timeout = Project ? Project->IdleTimeoutSeconds : 0.f;
-	if (bIsIdle || Timeout <= 0.f || FPlatformTime::Seconds() - LastActivityTime < Timeout)
+	if (Timeout <= 0.f || FPlatformTime::Seconds() - LastInput < Timeout)
 	{
 		return;
 	}
@@ -638,6 +661,7 @@ void UArchVizAppSubsystem::CheckIdle()
 			Camera->SetAutoRotate(true, 4.f);
 		}
 	}
+	IdleStartTime = FPlatformTime::Seconds();
 	OnIdleChanged.Broadcast(true);
 	SendStateToUI();
 }

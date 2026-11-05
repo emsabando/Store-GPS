@@ -76,7 +76,7 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	/** Hours 0..24. BlendSeconds > 0 animates (forward in time) for preset buttons. */
+	/** Hours 0..24. BlendSeconds > 0 animates the sun the short way round the clock (preset buttons). */
 	UFUNCTION(BlueprintCallable, Category = "ArchViz|Environment")
 	void SetTimeOfDay(float Hours, float BlendSeconds = 0.f);
 

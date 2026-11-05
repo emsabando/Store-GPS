@@ -53,8 +53,8 @@ protected:
 	virtual void HandleClick_Implementation(FVector2D ScreenPosition);
 
 private:
-	void TickMouse(AArchVizCameraPawn* Camera);
-	void TickTouch(AArchVizCameraPawn* Camera);
+	void TickMouse(AArchVizCameraPawn* CameraPawn);
+	void TickTouch(AArchVizCameraPawn* CameraPawn);
 	void NotifyActivity() const;
 
 	bool bCameraInputEnabled = true;

@@ -45,4 +45,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+private:
+	/** Actor collision as authored, restored when the floor is shown again. */
+	bool bOriginalActorCollision = true;
 };
