@@ -40,6 +40,7 @@ if (args.time) await page.evaluate((t) => window.__game.setTime(t), String(args.
 await page.evaluate(() => window.__game.frame(3)); // warm-up: first frames initialise post-processing and the environment
 // The watch-start title card (#cutscene, navy, 3.5 s) and the pointer-lock prompt (#helm) sit over the canvas: wait / hide them.
 await page.waitForFunction(() => { const c = document.querySelector('#cutscene'); return !c || c.classList.contains('hidden'); }, null, { timeout: 30000, polling: 200 });
+if (args.settle) await new Promise((r) => setTimeout(r, parseInt(args.settle, 10)));
 if (!args.helm) await page.evaluate(() => { const h = document.querySelector('#helm'); if (h) h.style.display = 'none'; });
 if (args.sink) {
   await page.evaluate((m) => { window.__game.setTime('23:40'); window.__game.startSinking(); window.__game.sinking.jumpTo?.(m); }, parseFloat(args.sink));
@@ -54,9 +55,11 @@ for (const loc of locations) {
     let probe = null;
     try {
       const cv = document.querySelector('canvas'); const els = document.elementsFromPoint(innerWidth / 2, innerHeight / 2).map((e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/).join('.') : ''));
-      const t = document.createElement('canvas'); t.width = 16; t.height = 9; const g = t.getContext('2d'); g.drawImage(cv, 0, 0, 16, 9);
-      const d = g.getImageData(0, 0, 16, 9).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; } const n = d.length / 4;
-      probe = { els: els.slice(0, 4), avg: [r / n, gg / n, b / n].map(Math.round), cut: (document.querySelector('#cutscene') || {}).className };
+      // render once more and read the centre + four quadrant pixels back in the same task (no compositor clear in between)
+      window.__game.engine.renderOnce();
+      const gl = window.__game.engine.renderer.getContext(); gl.bindFramebuffer(gl.FRAMEBUFFER, null); const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
+      const px = []; for (const [fx, fy] of [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) { const b4 = new Uint8Array(4); gl.readPixels(Math.floor(W * fx), Math.floor(H * fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b4); px.push(Array.from(b4)); }
+      probe = { els: els.slice(0, 4), px, cut: (document.querySelector('#cutscene') || {}).className, cam: window.__game.engine.camera === window.__game.player.camera ? 'player' : 'other' };
     } catch (e) { probe = { err: String(e) }; }
     return { post: !!window.__game.engine.postEnabled, cam: [c.position.x, c.position.y, c.position.z].map((v) => +v.toFixed(1)), mode: p.mode, yaw: +p.yaw.toFixed(2), pitch: +p.pitch.toFixed(2), probe, stats: window.__game.engine.stats };
   }, loc);

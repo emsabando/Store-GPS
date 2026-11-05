@@ -59,6 +59,12 @@ export class World {
     this.sunLight = sun;
     this.setWeather({ wind: this.wind, swell: this.swell });
     this._refreshAstronomy(true);
+    // The sky dome's uniforms must be set before the environment cube is rendered from it:
+    // an unsynced sky shader produced NaNs in the HalfFloat PMREM, which turned every
+    // environment-lit surface black (and, through the bloom mip chain, the whole frame)
+    // until the next scheduled refresh.
+    this.sky.update(this._state);
+    this.sky.group.position.copy(this.engine.camera.position);
     this.env.update(0, this._state);
     this.env.refresh(this._state);
     return this;
