@@ -330,10 +330,14 @@ export class QuestManager {
     return true;
   }
 
-  /** Next main-line beat after `beat` — explicit `next`, else array order (skipping optional beats). 'end' closes the watch. */
+  /**
+   * Next main-line beat after `beat` — explicit `next` id, else array order (skipping optional beats).
+   * `next: 'end'` (or `false`) closes the watch; `null`/`undefined` means "array order" (the story
+   * data's beat constructor defaults to null).
+   */
   _resolveNext(beat, w) {
     const beats = (w && w.beats) || [];
-    if (beat.next === null) return 'end';
+    if (beat.next === 'end' || beat.next === false) return 'end';
     if (typeof beat.next === 'string') {
       const nb = this.beats.get(beat.next);
       if (!nb) { console.warn(`[quest] beat "${beat.id}" → unknown next "${beat.next}"`); return 'end'; }
