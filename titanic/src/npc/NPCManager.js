@@ -100,6 +100,17 @@ export class NPCManager {
     return this._fallbackRoot;
   }
 
+  /**
+   * Where a named NPC stands for a landmark: 2.2 m ahead of the point along its yaw, facing back
+   * at it. Beats teleport the player to the same landmark id, so standing ON the point would put
+   * the first-person camera inside the character.
+   */
+  _standPoint(loc) {
+    const yaw = loc.yaw || 0;
+    const ahead = Number.isFinite(loc.standOff) ? loc.standOff : 2.2;
+    return { x: (loc.x || 0) + Math.cos(yaw) * ahead, z: (loc.z || 0) - Math.sin(yaw) * ahead, yaw: yaw + Math.PI };
+  }
+
   _location(locationId) {
     const locs = this.ship && this.ship.locations;
     if (!locs) return null;
@@ -129,9 +140,10 @@ export class NPCManager {
     const look = this._completeLook(c.look, c.faction);
     const behaviour = BEHAVIOURS.has(c.behaviour) ? c.behaviour : 'stand';
     const name = c.name || id;
+    const sp = this._standPoint(loc);
     const npc = this._create({
       id, name, faction: c.faction || 'modern', look, lines: (c.idle && c.idle.length ? c.idle : c.greeting) || [],
-      x: loc.x || 0, y, z: loc.z || 0, yaw: loc.yaw || 0, deck, behaviour, named: true,
+      x: sp.x, y, z: sp.z, yaw: sp.yaw, deck, behaviour, named: true,
       label: 'Talk to ' + name, locationId, character: c,
     });
     return npc;
@@ -146,23 +158,24 @@ export class NPCManager {
     const deck = loc.deck || this._deckAt(loc.y ?? 0);
     const y = Number.isFinite(loc.y) ? loc.y : this._deckY(deck, npc.group.position.y);
     const pos = npc.group.position;
-    const dx = (loc.x || 0) - pos.x, dz = (loc.z || 0) - pos.z;
+    const sp = this._standPoint(loc);
+    const dx = sp.x - pos.x, dz = sp.z - pos.z;
     const dist = Math.sqrt(dx * dx + dz * dz);
     npc.data.locationId = locationId;
     if (!teleportOnly && deck === npc.data.deck && dist < 60 && !npc.state.frozen) {
-      npc.state.goto = { x: loc.x || 0, z: loc.z || 0, yaw: loc.yaw || 0 };
+      npc.state.goto = { x: sp.x, z: sp.z, yaw: sp.yaw };
       npc.state.behaviour = 'goto';
       npc.state.hasTarget = false;
       npc.state.wait = 0;
-      npc.data.area = findArea(this.spec, deck, loc.x || 0, loc.z || 0);
+      npc.data.area = findArea(this.spec, deck, sp.x, sp.z);
       this._setupPatrol(npc);
       return npc;
     }
-    pos.set(loc.x || 0, y, loc.z || 0);
-    npc.data.home.x = pos.x; npc.data.home.y = y; npc.data.home.z = pos.z; npc.data.home.yaw = loc.yaw || 0;
+    pos.set(sp.x, y, sp.z);
+    npc.data.home.x = pos.x; npc.data.home.y = y; npc.data.home.z = pos.z; npc.data.home.yaw = sp.yaw;
     npc.data.deck = deck;
     npc.data.area = findArea(this.spec, deck, pos.x, pos.z);
-    npc.state.yaw = loc.yaw || 0;
+    npc.state.yaw = sp.yaw;
     npc.state.goto = null;
     npc.state.behaviour = this.panic > 0 && npc.data.behaviour !== 'play' ? 'flee' : npc.data.behaviour;
     npc.state.hasTarget = false;

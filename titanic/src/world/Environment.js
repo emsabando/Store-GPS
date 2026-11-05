@@ -54,8 +54,8 @@ export function lightingForElevation(elDeg, out = {}) {
   _c1.setRGB(0.010, 0.013, 0.022);
   _c2.setRGB(0.06, 0.11, 0.17);
   lerpC(_c1, _c2, day, out.hemiGround);
-  out.hemiIntensity = 0.24 + 0.36 * smoothstep(-8, 0, elDeg) + 0.35 * smoothstep(0, 12, elDeg);
-  out.exposure = 1.0 + 0.1 * dusk + 0.6 * night;
+  out.hemiIntensity = 0.18 + 0.25 * smoothstep(-8, 0, elDeg) + 0.22 * smoothstep(0, 12, elDeg);
+  out.exposure = 0.82 + 0.1 * dusk + 0.7 * night;
   out.fogDensity = 0.0012 - 0.0006 * day;
   out.dayFactor = day;
   out.nightFactor = night;

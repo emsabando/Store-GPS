@@ -42,7 +42,7 @@ async function main() {
   if (params.get('scale')) settings.set('renderScale', parseFloat(params.get('scale')));
   const quality = settings.get('quality');
 
-  const ui = new UI({ root, bus, settings, spec: SHIP, story: STORY, characters: CHARACTERS, discoveries: DISCOVERIES, collectibles: COLLECTIBLES });
+  const ui = new UI({ root, bus, settings, spec: SHIP, story: STORY, characters: CHARACTERS, discoveries: DISCOVERIES, collectibles: COLLECTIBLES, locations: LOCATIONS });
   const engine = new Engine({ canvas, settings, preserveDrawingBuffer: !!params.get('manual') });
   if (params.get('manual')) engine.manualRender = true;
   const clock = new GameClock();
@@ -63,6 +63,7 @@ async function main() {
   const player = new PlayerController({ engine, input, ship, settings, bus, materials, world });
   const npcs = new NPCManager({ ship, materials, characters: CHARACTERS, bus, clock, engine, world, player });
   const audio = new AudioEngine({ settings, bus });
+  audio.attachCamera?.(engine.camera);
   const dialogue = new DialogueRunner({ dialogues: DIALOGUES, characters: CHARACTERS, bus });
   const quest = new QuestManager({ story: STORY, dialogues: DIALOGUES, locations: LOCATIONS, discoveries: DISCOVERIES, collectibles: COLLECTIBLES, characters: CHARACTERS, bus, clock, player, npcs, ship, dialogue, world });
   dialogue.quest = quest;
@@ -132,7 +133,31 @@ async function main() {
   bus.on('ui:mode', ({ mode }) => { if (mode) setMode(mode); });
   bus.on('ui:requestPointerLock', () => { if (state.mode === 'playing' || state.mode === 'photo') input.requestPointerLock(); });
   bus.on('ui:toggleView', () => player.setMode(player.mode === 'first' ? 'third' : 'first'));
-  bus.on('ui:advanceTime', ({ to }) => { if (to) clock.advanceTo(to, settings.get('reduceMotion') ? 0.5 : 4); });
+  bus.on('ui:advanceTime', ({ to, date }) => { if (!to) return; if (date && date !== clock.date) { clock.setDate(date); clock.set(to); } else clock.advanceTo(to, settings.get('reduceMotion') ? 0.5 : 4); });
+  // crowds and the band follow the watches
+  const CROWDS = {
+    watch1: [['C', 'grand_staircase_C', 10, 'first'], ['D', 'open_space_3rd', 14, 'third'], ['C', null, 8, 'third'], ['boat', null, 10, 'first'], ['B', 'cafe_parisien', 6, 'first'], ['boat', 'bridge', 3, 'officer']],
+    watch2: [['A', 'lounge', 10, 'first'], ['D', 'reception_room', 12, 'first'], ['D', 'dining_saloon', 16, 'first'], ['A', null, 10, 'first'], ['C', 'general_room_3rd', 14, 'third'], ['B', null, 8, 'third'], ['tankTop', 'boiler_room_6', 6, 'crew']],
+    watch3: [['D', 'dining_saloon', 14, 'first'], ['A', 'smoking_room', 8, 'first'], ['C', 'general_room_3rd', 12, 'third'], ['boat', null, 10, 'first'], ['tankTop', 'boiler_room_6', 6, 'crew'], ['E', null, 6, 'crew']],
+    watch4: [['boat', null, 24, 'first'], ['boat', null, 10, 'crew'], ['A', 'smoking_room', 6, 'first'], ['D', 'open_space_3rd', 12, 'third'], ['B', null, 10, 'third']],
+    epilogue: [],
+  };
+  const BAND = { watch1: ['ragtime', 'band_reception'], watch2: ['waltz', 'band_reception'], watch3: ['autumn', 'band_reception'], watch4: ['nearerMyGod', 'boat_deck_entrance_fwd'], epilogue: [null, null] };
+  const scale = { low: 0.4, medium: 0.6, high: 1, ultra: 1.3 }[quality] || 1;
+  bus.on('quest:watchStart', ({ watch }) => {
+    if (!watch) return;
+    for (const [deck, room, count, faction] of CROWDS[watch.id] || []) { try { npcs.spawnCrowd({ deck, room, count: Math.max(2, Math.round(count * scale)), faction }); } catch (err) { console.warn('crowd spawn failed', err); } }
+    const [piece, locId] = BAND[watch.id] || [];
+    const loc = locId ? ship.locations.get(locId) : null;
+    if (piece && loc) { audio.band.setPosition(ship.localToWorld(new THREE.Vector3(loc.x, loc.y + 1.2, loc.z))); audio.band.play(piece, { loop: true }); } else audio.band.stop(2);
+    state.watchTitle = watch.title;
+  });
+  bus.on('quest:flag', ({ flag }) => { if (flag === 'band_ragtime') audio.band.play('ragtime', { loop: true }); if (flag === 'band_hymn') audio.band.play('nearerMyGod', { loop: true }); });
+  window.addEventListener('keydown', async (e) => {
+    if (e.code === 'KeyC' && state.mode === 'photo') {
+      try { const blob = await engine.screenshot(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `titanic-plate-${Date.now()}.png`; a.click(); bus.emit('notify', { text: 'Plate exposed.', kind: 'log' }); bus.emit('audio:play', { id: 'ui_click' }); } catch (err) { console.warn(err); }
+    }
+  });
   bus.on('ui:teleport', ({ locationId }) => { const l = ship.locations.get(locationId); if (l) player.teleportLocal(l.x, (l.y ?? 0) + 0.1, l.z, l.yaw || 0); });
   bus.on('ui:photoMode', ({ on }) => { setMode(on ? 'photo' : 'playing'); player.setMode(on ? 'free' : settings.get('viewMode')); });
   bus.on('input:escape', () => { if (state.mode === 'playing') setMode('paused'); });
@@ -166,7 +191,7 @@ async function main() {
   });
 
   // ---- frame loop ----
-  let fpsAcc = 0, fpsN = 0;
+  let fpsAcc = 0, fpsN = 0, roomTimer = 0;
   const camPos = new THREE.Vector3();
   engine.onUpdate((dt, elapsed) => {
     input.beginFrame();
@@ -174,7 +199,7 @@ async function main() {
     if (playing || state.mode === 'dialogue') clock.update(dt);
     engine.camera.getWorldPosition(camPos);
     world.update(dt, camPos);
-    ship.update(dt);
+    ship.update(dt, camPos);
     if (playing) {
       player.update(dt);
       npcs.update(dt, player.position);
@@ -190,6 +215,10 @@ async function main() {
     const lp = ship.worldToLocal(player.position);
     state.player = { x: lp.x, y: lp.y, z: lp.z };
     state.objective = quest.currentBeat ? { title: quest.currentBeat.title, text: quest.currentBeat.objective, locationId: quest.currentBeat.locationId } : null;
+    state.nextTime = quest.nextTime || null;
+    state.inventory = quest.inventory ? [...quest.inventory.keys()] : [];
+    roomTimer += dt;
+    if (roomTimer > 0.5) { roomTimer = 0; const d = SHIP.decks.find((x) => x.id === state.deck); const r = d && d.rooms.find((rr) => lp.x >= rr.x0 && lp.x <= rr.x1 && lp.z >= rr.z0 && lp.z <= rr.z1 && !/casing/.test(rr.id)); state.room = r ? r.name.split(/[—(]/)[0].trim() : ''; }
     state.sinking = sinking.active ? sinking.state : null;
     state.reputation = quest.reputation || state.reputation;
     state.stats = engine.stats;

@@ -1,1 +1,22 @@
-/* STUB — replaced by the UI engineer (ARCHITECTURE.md §8). */
+/* Panels: settings, journal, deck plan, photo mode, chronometer */
+.settings-panel { position: relative; width: 56rem; max-width: 94vw; max-height: 88vh; overflow: auto; padding: 1.4rem 1.8rem; }
+.tabrail { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.tabrail .tab { font-size: var(--fs-xs); padding: .3rem .8rem; cursor: pointer; opacity: .75; }
+.tabrail .tab.active { opacity: 1; box-shadow: inset 0 1px 0 #fff8, inset 0 -2px 0 #0006, 0 0 0 .2rem #F2D27A66; }
+.settings-body .row { display: grid; grid-template-columns: 14rem 1fr; align-items: center; gap: 1rem; padding: .5rem 0; border-bottom: 1px solid #0004; }
+.telegraph { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; background: var(--grad-bronze); padding: .6rem; border-radius: 6rem 6rem .6rem .6rem; border: .25rem solid var(--bronze-lo); }
+.telegraph .pos { background: var(--parchment); color: var(--ink); border: 2px solid var(--brass-lo); border-radius: .4rem; padding: .8rem .4rem; font-family: var(--font-engrave); font-size: var(--fs-xs); letter-spacing: .1em; text-transform: uppercase; }
+.telegraph .pos.active { background: var(--brass); box-shadow: 0 0 0 .2rem #F2D27A88; }
+.journal { position: relative; width: 52rem; max-width: 94vw; max-height: 88vh; padding: 1.4rem 1.8rem; display: flex; flex-direction: column; }
+.journal-page { padding: 1rem 1.4rem; overflow: auto; max-height: 56vh; font-size: var(--fs-md); }
+.journal-page .plaque-entry { margin-bottom: .8rem; padding-bottom: .5rem; border-bottom: 1px dashed #0003; }
+.mapframe { position: relative; width: 92vw; max-width: 110rem; padding: 1rem 1.4rem; }
+.decktabs { display: flex; gap: .4rem; flex-wrap: wrap; margin: .6rem 0; }
+.decktabs .tab { font-size: var(--fs-xs); padding: .25rem .7rem; cursor: pointer; opacity: .7; }
+.decktabs .tab.active { opacity: 1; box-shadow: inset 0 1px 0 #fff8, inset 0 -2px 0 #0006, 0 0 0 .2rem #F2D27A66; }
+.blueprint { width: 100%; height: 52vh; background: #0E2A4A; background-image: repeating-linear-gradient(0deg, #FFFFFF14 0 1px, transparent 1px 1rem), repeating-linear-gradient(90deg, #FFFFFF14 0 1px, transparent 1px 1rem), repeating-linear-gradient(0deg, #FFFFFF28 0 1px, transparent 1px 5rem), repeating-linear-gradient(90deg, #FFFFFF28 0 1px, transparent 1px 5rem); border: .25rem solid var(--brass-lo); border-radius: .4rem; }
+#photo { position: fixed; inset: 0; z-index: 35; }
+#photo .bellows { position: absolute; inset: 0; box-shadow: inset 0 0 0 1.2rem var(--bronze-lo), inset 0 0 0 1.6rem var(--brass), inset 0 0 6rem #000c; pointer-events: none; }
+#photo .photo-bar { position: absolute; left: 50%; bottom: 2.4rem; transform: translateX(-50%); display: flex; gap: 1.2rem; align-items: center; color: var(--fog); font-family: var(--font-engrave); font-size: var(--fs-xs); letter-spacing: .12em; }
+.manifest .row-m { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-family: var(--font-doc); border-bottom: 1px dotted #0003; padding: .15rem 0; }
+.manifest .row-m .r { color: var(--pencil); font-style: italic; }

@@ -47,6 +47,9 @@ export class Ship {
     this.locations = new Map();
     this.lightsList = [];
     this.lampMeshes = [];
+    this.lamps = [];              // { parent, local: Vector3, color, intensity, distance, decay } (pooled point lights)
+    this.pool = [];               // the few real PointLights, reassigned to the nearest lamps each frame
+    this.poolSize = { low: 4, medium: 6, high: 10, ultra: 14 }[quality] || 8;
     this.dynamic = [];
     this.interactables = new Map();
     this.funnels = [];
@@ -134,6 +137,18 @@ export class Ship {
     }
     for (const loc of result.locations || []) this.locations.set(loc.id, { ...loc });
     for (const l of result.lights || []) { l.userData.baseIntensity = l.intensity; this.lightsList.push(l); }
+    // Pool point lights: three.js evaluates every light for every fragment, so builders' lamps become
+    // descriptors and a small pool of real lights follows the camera.
+    if (result.group) {
+      const found = [];
+      result.group.traverse((o) => { if (o.isPointLight) found.push(o); });
+      for (const pl of found) {
+        const parent = pl.parent || result.group;
+        this.lamps.push({ parent, local: pl.position.clone(), color: pl.color.clone(), intensity: pl.userData.baseIntensity ?? pl.intensity, distance: pl.distance || 10, decay: pl.decay || 2, world: new THREE.Vector3() });
+        parent.remove(pl);
+        const idx = this.lightsList.indexOf(pl); if (idx >= 0) this.lightsList.splice(idx, 1);
+      }
+    }
     for (const d of result.dynamic || []) this.dynamic.push(d);
     for (const it of result.interactables || []) this.interactables.set(it.id, it);
     if (result.funnels) this.funnels = result.funnels;
@@ -190,6 +205,35 @@ export class Ship {
 
   deckY(id) { const d = (this.spec.decks || []).find((x) => x.id === id); return d ? d.y : 0; }
 
+  /** Assign the pooled PointLights to the lamps nearest the camera (world position). */
+  updateLightPool(cameraWorldPos) {
+    if (!this.lamps.length) return;
+    if (!this.pool.length) {
+      for (let i = 0; i < this.poolSize; i++) {
+        const pl = new THREE.PointLight(0xffa552, 0, 12, 2);
+        pl.name = `pooledLamp${i}`; pl.castShadow = false;
+        this.group.add(pl); this.pool.push(pl);
+      }
+    }
+    const cam = cameraWorldPos || new THREE.Vector3();
+    for (const L of this.lamps) { L.world.copy(L.local); L.parent.localToWorld(L.world); L.d2 = L.world.distanceToSquared(cam); }
+    // partial selection of the N nearest
+    const n = this.pool.length;
+    const nearest = [];
+    for (const L of this.lamps) {
+      if (nearest.length < n) { nearest.push(L); if (nearest.length === n) nearest.sort((a, b) => a.d2 - b.d2); continue; }
+      if (L.d2 < nearest[n - 1].d2) { nearest[n - 1] = L; nearest.sort((a, b) => a.d2 - b.d2); }
+    }
+    for (let i = 0; i < n; i++) {
+      const pl = this.pool[i], L = nearest[i];
+      if (!L) { pl.intensity = 0; continue; }
+      pl.position.copy(this.group.worldToLocal(L.world.clone()));
+      pl.color.copy(L.color); pl.distance = L.distance; pl.decay = L.decay;
+      const fade = THREE.MathUtils.clamp(1 - Math.sqrt(L.d2) / 60, 0.15, 1);
+      pl.intensity = L.intensity * this._power * fade;
+    }
+  }
+
   setPower(p) {
     this._power = Math.max(0, Math.min(1, p));
     for (const l of this.lightsList) l.intensity = (l.userData.baseIntensity ?? 1) * this._power;
@@ -199,7 +243,8 @@ export class Ship {
     }
   }
 
-  update(dt) {
+  update(dt, cameraWorldPos) {
+    if (cameraWorldPos) this.updateLightPool(cameraWorldPos);
     if (this._flicker > 0) {
       this._flicker -= dt;
       const p = this._flicker <= 0 ? this._powerTarget ?? this._power : (Math.random() < 0.5 ? 0.15 : 1) * (this._powerTarget ?? 1);

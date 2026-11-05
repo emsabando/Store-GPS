@@ -81,7 +81,7 @@ for (const loc of locations) {
   const ok = await page.evaluate((id) => { try { const l = window.__game.teleport(id); return !!l; } catch (e) { return false; } }, loc);
   if (!ok) { results.push({ loc, skipped: true }); console.log(`- ${loc}: unknown location, skipped`); continue; }
   const t1 = Date.now();
-  const stats = await page.evaluate((n) => window.__game.frame(n), frames);
+  const stats = await page.evaluate((n) => window.__game.frame(Math.max(4, n)), frames);
   const file = path.join(outDir, `${loc}.png`);
   await page.screenshot({ path: file, type: 'png', timeout: 600000 });
   const br = await brightness(file);

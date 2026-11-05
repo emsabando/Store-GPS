@@ -88,18 +88,23 @@ function lathe(points, seg = 18) { return new THREE.LatheGeometry(points.map(([r
 export function mergeParts(parts, name) {
   const mats = [];
   const geoms = [];
+  const matIndexOfGeom = [];   // material slot for each merged part (parallel to `geoms`)
   for (const { g, m } of parts) {
     if (!g) continue;
     let idx = mats.indexOf(m);
     if (idx < 0) { idx = mats.length; mats.push(m); }
     const ng = g.index ? g.toNonIndexed() : g;
     ng.clearGroups();
-    ng.addGroup(0, ng.attributes.position.count, idx);
     if (!ng.attributes.uv) ng.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(ng.attributes.position.count * 2), 2));
     geoms.push(ng);
+    matIndexOfGeom.push(idx);
     if (ng !== g) g.dispose();
   }
+  // mergeGeometries(…, true) writes one group per input geometry with materialIndex = geometry
+  // index, NOT our material slot. Remap, otherwise parts past mats.length have no material:
+  // they neither render nor survive a raycast (three reads material[idx].side → TypeError).
   const merged = mergeGeometries(geoms, true);
+  for (let i = 0; i < merged.groups.length; i++) merged.groups[i].materialIndex = matIndexOfGeom[i];
   for (const g of geoms) g.dispose();
   merged.computeBoundingSphere();
   const mesh = new THREE.Mesh(merged, mats.length === 1 ? mats[0] : mats);

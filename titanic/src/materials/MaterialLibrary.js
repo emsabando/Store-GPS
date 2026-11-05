@@ -67,7 +67,7 @@ const DEFS = {
   hullBlackRiveted: { ...paint(PALETTE.hullBlack, 0.45, 0.1), metalness: 0.15, normalScale: 1, extraNormal: (s) => P.makeRivetedPlates({ plateW: 2, plateH: 1, rivetPitch: 0.09, color: PALETTE.hullBlack, size: s }), fallback: (s) => P.makeRivetedPlates({ plateW: 2, plateH: 1, rivetPitch: 0.09, color: PALETTE.hullBlack, size: s }) },
   antifouling: paint(PALETTE.antifouling, 0.65, 0.3), boottop: paint(PALETTE.boottop, 0.55, 0.2),
   sheerStripe: { ...metal(0.3, PALETTE.sheerStripe), metalness: 0.9 },
-  funnelBuff: paint(PALETTE.funnelBuff, 0.5, 0.15), funnelBlack: paint(PALETTE.funnelBlack, 0.5, 0.15),
+  funnelBuff: { ...paint(PALETTE.funnelBuff, 0.55, 0.1), colour: '#C08A52' }, funnelBlack: paint(PALETTE.funnelBlack, 0.5, 0.15),
   brass: metal(0.3, PALETTE.brass), bronze: metal(0.42, PALETTE.bronze), copper: metal(0.32, PALETTE.copper), gold: metal(0.22, PALETTE.gold),
   wroughtIron: { ...metal(0.55, PALETTE.wroughtIron, false), metalness: 0.85, colourMap: true }, ironDark: { ...metal(0.6, PALETTE.ironDark, false), metalness: 0.8, colourMap: true },
   steelGrey: { ...metal(0.38, PALETTE.steelGrey), colourMap: true }, steelRusty: { roughness: 0.8, metalness: 0.35, normalScale: 0.8, fallback: (s) => P.makeRivetedPlates({ color: PALETTE.steelRusty, rust: 0.8, size: s }) },
@@ -120,6 +120,10 @@ function averageColour(image) {
     return new THREE.Color().setRGB(r / n / 255, gg / n / 255, b / n / 255, THREE.SRGBColorSpace);
   } catch (_) { return null; }
 }
+
+/** Materials used mostly indoors: the sky environment map is dimmed on them so rooms read as lamp-lit. */
+export const INTERIOR_NAMES = new Set(['oakPanel', 'oakDark', 'mahogany', 'walnut', 'sycamore', 'whiteEnamel', 'plasterWhite', 'plasterCream', 'linoDining', 'linoCorridor', 'linoLanding',
+  'carpetRed', 'carpetBlue', 'carpetGreen', 'roseCarpet', 'moorishTile', 'marbleWhite', 'velvetGreen', 'velvetRed', 'leatherDark', 'leatherGreen', 'wicker', 'steelGrey', 'steelRusty', 'boilerIron', 'coal', 'woodCrate', 'clothCream', 'clothWhite']);
 
 export class MaterialLibrary {
   constructor(quality = 'high') {
@@ -269,6 +273,7 @@ export class MaterialLibrary {
       mat.roughness = THREE.MathUtils.clamp((def.roughness ?? 0.6) / mean, 0.05, 3);
     }
     mat.userData.materialName = name;
+    if (INTERIOR_NAMES.has(name)) mat.envMapIntensity = 0.3;
     this._cache.set(name, mat);
     return mat;
   }
