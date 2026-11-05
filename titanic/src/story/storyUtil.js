@@ -57,12 +57,14 @@ export function horizontalDistance(a, b) {
 }
 
 /**
- * Whether a ship-local point `p` (the player's eye point, ~1.65 m above the feet) is
- * "at" a ship-local target `t` within `radius` horizontally and on the same deck.
- * The vertical window is asymmetric so a player on the deck directly below or above
- * (≈ ±2.7 m) does not match, while the eye point of a player standing at the target does.
+ * Whether a ship-local point `p` (the player's FEET point — PlayerController.position is the
+ * capsule base; in free/photo mode it is the eye, 1.65 m higher) is "at" a ship-local target `t`
+ * (y = deck floor) within `radius` horizontally and on the same deck. The vertical window must
+ * exclude the decks directly below and above: the tightest deck spacing is 2.6 m (C–G), so the
+ * window is [-0.9, +1.9]: feet on the floor (dy ≈ 0.1), on a seat, half-way down a stair or the
+ * free-camera eye (1.65) all match; a player one deck up (2.6+) or down (-2.6) does not.
  */
-export function withinLocation(p, t, radius = 3, below = 0.9, above = 2.6) {
+export function withinLocation(p, t, radius = 3, below = 0.9, above = 1.9) {
   if (!p || !t) return false;
   if (horizontalDistance(p, t) > radius) return false;
   const dy = (p.y || 0) - (t.y || 0);

@@ -294,6 +294,8 @@ ui:photoMode, ui:mode, ui:requestPointerLock, ui:toggleView, audio:play`
 
 ## Extensions
 (append here, one line each: `module → export` and why)
+* `player/Character.js → optional `yawOffset` (radians) on the makeCharacter result` — NPCManager sets `group.rotation.y = yaw + (character.yawOffset ?? 0)`, assuming the model faces +x at rotation 0 when absent. (NPCManager, feature-detected.)
+* `story/QuestManager.js → quest.playerId / quest.playerName, event quest:player { id, name }, action { type:'setPlayer', characterId }` — the playable character changes in Watch IV (Jack ↔ Rosie); DialogueRunner resolves `{player}` from it and the UI may relabel the HUD. (QuestManager, additive.)
 
 ## 11. Additional binding details (added by the integrator)
 

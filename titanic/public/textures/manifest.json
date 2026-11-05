@@ -1,0 +1,890 @@
+{
+ "teakDeck": {
+  "color": "WoodFloor051/color.webp",
+  "normal": "WoodFloor051/normal.webp",
+  "roughness": "WoodFloor051/roughness.webp",
+  "ao": "WoodFloor051/ao.webp",
+  "sizeM": [
+   1.2,
+   1.2
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "WoodFloor051",
+  "resolution": 2048,
+  "bytes": 676104,
+  "note": "clean warm plank floor → teak deck planks (repeat tuned to ~0.15 m planks)"
+ },
+ "pineDeck": {
+  "color": "Planks033A/color.webp",
+  "normal": "Planks033A/normal.webp",
+  "roughness": "Planks033A/roughness.webp",
+  "ao": "Planks033A/ao.webp",
+  "sizeM": [
+   2,
+   2
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Planks033A",
+  "resolution": 1024,
+  "bytes": 251484,
+  "note": "pale planks → holystoned pine deck"
+ },
+ "oakPanel": {
+  "color": "Wood049/color.webp",
+  "normal": "Wood049/normal.webp",
+  "roughness": "Wood049/roughness.webp",
+  "sizeM": [
+   0.8,
+   0.8
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Wood049",
+  "resolution": 2048,
+  "bytes": 1861188,
+  "note": "oak grain, horizontal"
+ },
+ "oakDark": {
+  "color": "Wood084A/color.webp",
+  "normal": "Wood084A/normal.webp",
+  "roughness": "Wood084A/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Wood084A",
+  "resolution": 1024,
+  "bytes": 206104,
+  "note": "dark stained oak"
+ },
+ "mahogany": {
+  "color": "Wood030/color.webp",
+  "normal": "Wood030/normal.webp",
+  "roughness": "Wood030/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Wood030",
+  "resolution": 1024,
+  "tint": "#a9603f",
+  "bytes": 306640,
+  "note": "orange fine wood tinted to mahogany"
+ },
+ "walnut": {
+  "color": "walnut_veneer/color.webp",
+  "normal": "walnut_veneer/normal.webp",
+  "roughness": "walnut_veneer/roughness.webp",
+  "ao": "walnut_veneer/ao.webp",
+  "sizeM": [
+   1.7999999523162842,
+   1.7999999523162842
+  ],
+  "source": "Poly Haven",
+  "license": "CC0",
+  "asset": "walnut_veneer",
+  "resolution": 1024,
+  "tint": "#c9a07a",
+  "bytes": 162448,
+  "note": "walnut veneer, warmed"
+ },
+ "sycamore": {
+  "color": "Wood095/color.webp",
+  "normal": "Wood095/normal.webp",
+  "roughness": "Wood095/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Wood095",
+  "resolution": 1024,
+  "bytes": 142870,
+  "note": "pale clean wood"
+ },
+ "whiteEnamel": {
+  "color": "Paint004/color.webp",
+  "normal": "Paint004/normal.webp",
+  "roughness": "Paint004/roughness.webp",
+  "ao": "Paint004/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Paint004",
+  "resolution": 1024,
+  "bytes": 380868,
+  "note": "white gloss paint with fine cracks"
+ },
+ "whitePaintedSteel": {
+  "color": "Metal016/color.webp",
+  "normal": "Metal016/normal.webp",
+  "roughness": "Metal016/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal016",
+  "resolution": 1024,
+  "bytes": 395528,
+  "note": "light painted, lightly scratched steel"
+ },
+ "hullBlack": {
+  "color": "Metal027/color.webp",
+  "normal": "Metal027/normal.webp",
+  "roughness": "Metal027/roughness.webp",
+  "sizeM": [
+   2,
+   2
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal027",
+  "resolution": 2048,
+  "bytes": 1875272,
+  "note": "black painted steel"
+ },
+ "hullBlackRiveted": {
+  "color": "Metal027/color.webp",
+  "normal": "Metal027/normal.webp",
+  "roughness": "Metal027/roughness.webp",
+  "sizeM": [
+   2,
+   2
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal027",
+  "resolution": 2048,
+  "bytes": 1875272,
+  "note": "same paint; rivet/plate normal is generated procedurally"
+ },
+ "antifouling": {
+  "color": "Metal016/color.webp",
+  "normal": "Metal016/normal.webp",
+  "roughness": "Metal016/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal016",
+  "resolution": 1024,
+  "tint": "#7a2a1e",
+  "bytes": 395528,
+  "note": "painted steel tinted antifouling red"
+ },
+ "boottop": {
+  "color": "Metal016/color.webp",
+  "normal": "Metal016/normal.webp",
+  "roughness": "Metal016/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal016",
+  "resolution": 1024,
+  "tint": "#3a221b",
+  "bytes": 395528,
+  "note": "painted steel tinted boot-topping"
+ },
+ "sheerStripe": {
+  "color": "Metal042A/color.webp",
+  "normal": "Metal042A/normal.webp",
+  "roughness": "Metal042A/roughness.webp",
+  "sizeM": [
+   0.5,
+   0.5
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal042A",
+  "resolution": 1024,
+  "tint": "#d4b25a",
+  "bytes": 33692,
+  "note": "gold leaf stripe"
+ },
+ "funnelBuff": {
+  "color": "Metal016/color.webp",
+  "normal": "Metal016/normal.webp",
+  "roughness": "Metal016/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal016",
+  "resolution": 1024,
+  "tint": "#c9a66b",
+  "bytes": 395528,
+  "note": "painted steel tinted White Star buff"
+ },
+ "funnelBlack": {
+  "color": "Metal027/color.webp",
+  "normal": "Metal027/normal.webp",
+  "roughness": "Metal027/roughness.webp",
+  "sizeM": [
+   2,
+   2
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal027",
+  "resolution": 2048,
+  "bytes": 1875272,
+  "note": "black painted steel"
+ },
+ "brass": {
+  "color": "Metal034/color.webp",
+  "normal": "Metal034/normal.webp",
+  "roughness": "Metal034/roughness.webp",
+  "sizeM": [
+   0.5,
+   0.5
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal034",
+  "resolution": 1024,
+  "tint": "#b08d57",
+  "bytes": 7270,
+  "note": "polished yellow metal tinted brass"
+ },
+ "bronze": {
+  "color": "Metal008/color.webp",
+  "normal": "Metal008/normal.webp",
+  "roughness": "Metal008/roughness.webp",
+  "sizeM": [
+   0.5,
+   0.5
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal008",
+  "resolution": 1024,
+  "tint": "#8c6b3d",
+  "bytes": 199102,
+  "note": "scratched coppery metal tinted bronze"
+ },
+ "copper": {
+  "color": "Metal035/color.webp",
+  "normal": "Metal035/normal.webp",
+  "roughness": "Metal035/roughness.webp",
+  "sizeM": [
+   0.5,
+   0.5
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal035",
+  "resolution": 1024,
+  "bytes": 19762,
+  "note": "smooth copper"
+ },
+ "gold": {
+  "color": "Metal042A/color.webp",
+  "normal": "Metal042A/normal.webp",
+  "roughness": "Metal042A/roughness.webp",
+  "sizeM": [
+   0.5,
+   0.5
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal042A",
+  "resolution": 1024,
+  "bytes": 33692,
+  "note": "clean gold"
+ },
+ "wroughtIron": {
+  "color": "Metal046A/color.webp",
+  "normal": "Metal046A/normal.webp",
+  "roughness": "Metal046A/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal046A",
+  "resolution": 1024,
+  "bytes": 100124,
+  "note": "black iron"
+ },
+ "ironDark": {
+  "color": "Metal046A/color.webp",
+  "normal": "Metal046A/normal.webp",
+  "roughness": "Metal046A/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal046A",
+  "resolution": 1024,
+  "bytes": 100124,
+  "note": "black iron"
+ },
+ "steelGrey": {
+  "color": "Metal030/color.webp",
+  "normal": "Metal030/normal.webp",
+  "roughness": "Metal030/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal030",
+  "resolution": 1024,
+  "bytes": 7264,
+  "note": "grey smooth steel"
+ },
+ "steelRusty": {
+  "color": "Metal053C/color.webp",
+  "normal": "Metal053C/normal.webp",
+  "roughness": "Metal053C/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal053C",
+  "resolution": 1024,
+  "bytes": 440928,
+  "note": "rusted iron"
+ },
+ "boilerIron": {
+  "color": "Metal041B/color.webp",
+  "normal": "Metal041B/normal.webp",
+  "roughness": "Metal041B/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Metal041B",
+  "resolution": 1024,
+  "bytes": 374644,
+  "note": "iron with rust bloom"
+ },
+ "linoCorridor": {
+  "color": "linoleum_brown/color.webp",
+  "normal": "linoleum_brown/normal.webp",
+  "roughness": "linoleum_brown/roughness.webp",
+  "ao": "linoleum_brown/ao.webp",
+  "sizeM": [
+   2,
+   2
+  ],
+  "source": "Poly Haven",
+  "license": "CC0",
+  "asset": "linoleum_brown",
+  "resolution": 1024,
+  "tint": "#b05a46",
+  "bytes": 318856,
+  "note": "linoleum tinted corridor red-brown"
+ },
+ "moorishTile": {
+  "color": "Tiles099/color.webp",
+  "normal": "Tiles099/normal.webp",
+  "roughness": "Tiles099/roughness.webp",
+  "ao": "Tiles099/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Tiles099",
+  "resolution": 1024,
+  "bytes": 725490,
+  "note": "painted pattern tiles (Turkish bath)"
+ },
+ "marbleWhite": {
+  "color": "Marble001/color.webp",
+  "normal": "Marble001/normal.webp",
+  "roughness": "Marble001/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Marble001",
+  "resolution": 1024,
+  "bytes": 254334,
+  "note": "white marble"
+ },
+ "plasterWhite": {
+  "color": "Plaster002/color.webp",
+  "normal": "Plaster002/normal.webp",
+  "roughness": "Plaster002/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Plaster002",
+  "resolution": 1024,
+  "bytes": 543898,
+  "note": "white rough plaster"
+ },
+ "plasterCream": {
+  "color": "Plaster004/color.webp",
+  "normal": "Plaster004/normal.webp",
+  "roughness": "Plaster004/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Plaster004",
+  "resolution": 1024,
+  "tint": "#efe6cf",
+  "bytes": 678712,
+  "note": "white plaster tinted cream"
+ },
+ "carpetRed": {
+  "color": "Carpet015/color.webp",
+  "normal": "Carpet015/normal.webp",
+  "roughness": "Carpet015/roughness.webp",
+  "ao": "Carpet015/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Carpet015",
+  "resolution": 2048,
+  "bytes": 3710972,
+  "note": "red woven carpet"
+ },
+ "carpetBlue": {
+  "color": "Carpet012/color.webp",
+  "normal": "Carpet012/normal.webp",
+  "roughness": "Carpet012/roughness.webp",
+  "ao": "Carpet012/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Carpet012",
+  "resolution": 2048,
+  "bytes": 4926530,
+  "note": "dark blue plain carpet"
+ },
+ "carpetGreen": {
+  "color": "Fabric024/color.webp",
+  "normal": "Fabric024/normal.webp",
+  "roughness": "Fabric024/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric024",
+  "resolution": 1024,
+  "tint": "#6f9a6a",
+  "bytes": 773156,
+  "note": "green carpet, darkened"
+ },
+ "roseCarpet": {
+  "color": "Carpet008/color.webp",
+  "normal": "Carpet008/normal.webp",
+  "roughness": "Carpet008/roughness.webp",
+  "ao": "Carpet008/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Carpet008",
+  "resolution": 1024,
+  "tint": "#d59aa6",
+  "bytes": 1403572,
+  "note": "beige patterned carpet tinted rose"
+ },
+ "canvas": {
+  "color": "Fabric001/color.webp",
+  "normal": "Fabric001/normal.webp",
+  "roughness": "Fabric001/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric001",
+  "resolution": 1024,
+  "tint": "#d8cfb8",
+  "bytes": 337360,
+  "note": "old white cloth"
+ },
+ "canvasCover": {
+  "color": "Fabric001/color.webp",
+  "normal": "Fabric001/normal.webp",
+  "roughness": "Fabric001/roughness.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric001",
+  "resolution": 1024,
+  "tint": "#cfc6ad",
+  "bytes": 337360,
+  "note": "old white cloth, lifeboat cover"
+ },
+ "lifeboatWhite": {
+  "color": "Paint004/color.webp",
+  "normal": "Paint004/normal.webp",
+  "roughness": "Paint004/roughness.webp",
+  "ao": "Paint004/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Paint004",
+  "resolution": 1024,
+  "bytes": 380868,
+  "note": "white paint"
+ },
+ "rope": {
+  "color": "Rope001/color.webp",
+  "normal": "Rope001/normal.webp",
+  "roughness": "Rope001/roughness.webp",
+  "sizeM": [
+   0.25,
+   0.25
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Rope001",
+  "resolution": 1024,
+  "bytes": 276166,
+  "note": "laid rope"
+ },
+ "velvetRed": {
+  "color": "velour_velvet/color.webp",
+  "normal": "velour_velvet/normal.webp",
+  "roughness": "velour_velvet/roughness.webp",
+  "ao": "velour_velvet/ao.webp",
+  "sizeM": [
+   0.28422817052147237,
+   0.273499995470047
+  ],
+  "source": "Poly Haven",
+  "license": "CC0",
+  "asset": "velour_velvet",
+  "resolution": 1024,
+  "bytes": 593694,
+  "note": "red velour"
+ },
+ "velvetGreen": {
+  "color": "ribbed_corduroy/color.webp",
+  "normal": "ribbed_corduroy/normal.webp",
+  "roughness": "ribbed_corduroy/roughness.webp",
+  "ao": "ribbed_corduroy/ao.webp",
+  "sizeM": [
+   0.2664041751752189,
+   0.26669999957084656
+  ],
+  "source": "Poly Haven",
+  "license": "CC0",
+  "asset": "ribbed_corduroy",
+  "resolution": 1024,
+  "tint": "#5f8a66",
+  "bytes": 1066436,
+  "note": "green corduroy"
+ },
+ "leatherDark": {
+  "color": "Leather006/color.webp",
+  "normal": "Leather006/normal.webp",
+  "roughness": "Leather006/roughness.webp",
+  "sizeM": [
+   0.6,
+   0.6
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Leather006",
+  "resolution": 1024,
+  "bytes": 538102,
+  "note": "dark worn leather"
+ },
+ "leatherGreen": {
+  "color": "Leather004/color.webp",
+  "normal": "Leather004/normal.webp",
+  "roughness": "Leather004/roughness.webp",
+  "sizeM": [
+   0.6,
+   0.6
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Leather004",
+  "resolution": 1024,
+  "tint": "#2c4a36",
+  "bytes": 357420,
+  "note": "white leather tinted green"
+ },
+ "wicker": {
+  "color": "Wicker005/color.webp",
+  "normal": "Wicker005/normal.webp",
+  "roughness": "Wicker005/roughness.webp",
+  "ao": "Wicker005/ao.webp",
+  "sizeM": [
+   0.5,
+   0.5
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Wicker005",
+  "resolution": 1024,
+  "bytes": 611804,
+  "note": "light wicker weave"
+ },
+ "coal": {
+  "color": "Gravel024/color.webp",
+  "normal": "Gravel024/normal.webp",
+  "roughness": "Gravel024/roughness.webp",
+  "ao": "Gravel024/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Gravel024",
+  "resolution": 1024,
+  "tint": "#5a5a5c",
+  "bytes": 1026442,
+  "note": "black gravel → coal heap"
+ },
+ "woodCrate": {
+  "color": "Planks011/color.webp",
+  "normal": "Planks011/normal.webp",
+  "roughness": "Planks011/roughness.webp",
+  "ao": "Planks011/ao.webp",
+  "sizeM": [
+   1,
+   1
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Planks011",
+  "resolution": 1024,
+  "bytes": 749098,
+  "note": "nailed rough planks"
+ },
+ "snow": {
+  "color": "Snow007A/color.webp",
+  "normal": "Snow007A/normal.webp",
+  "roughness": "Snow007A/roughness.webp",
+  "ao": "Snow007A/ao.webp",
+  "sizeM": [
+   2,
+   2
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Snow007A",
+  "resolution": 1024,
+  "bytes": 369162,
+  "note": "clean snow"
+ },
+ "ice": {
+  "color": "Ice002/color.webp",
+  "normal": "Ice002/normal.webp",
+  "roughness": "Ice002/roughness.webp",
+  "sizeM": [
+   2,
+   2
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Ice002",
+  "resolution": 1024,
+  "bytes": 259472,
+  "note": "frozen lake ice"
+ },
+ "clothBlack": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#141416",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "clothWhite": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#f3f0ea",
+  "bytes": 499562,
+  "note": "white wool weave"
+ },
+ "clothNavy": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#182540",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "clothGrey": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#6e6e70",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "clothBrown": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#5a3d2a",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "clothCream": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#e9dcc2",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "clothBurgundy": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#5e1a26",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "clothBlue": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#2a4b7c",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "clothGreen": {
+  "color": "Fabric019/color.webp",
+  "normal": "Fabric019/normal.webp",
+  "roughness": "Fabric019/roughness.webp",
+  "sizeM": [
+   0.3,
+   0.3
+  ],
+  "source": "ambientCG",
+  "license": "CC0",
+  "asset": "Fabric019",
+  "resolution": 1024,
+  "tint": "#2e5a3c",
+  "bytes": 499562,
+  "note": "white wool weave tinted"
+ },
+ "_meta": {
+  "generated": "2026-11-04T14:56:34.175Z",
+  "totalBytes": 27461530,
+  "assets": 39,
+  "materials": 56
+ }
+}

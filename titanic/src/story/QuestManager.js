@@ -11,13 +11,19 @@
  *   quest.nextTime → { at, date } | null  (the time the current beat is waiting for; UI "Advance the Watch")
  *   quest.complete(beatId), quest.runActions(actions), quest.collect(id, interactable?), quest.discover(id),
  *   quest.setFlag(flag, on=true), quest.addReputation(faction, delta), quest.save() → json, quest.load(json)
+ *   quest.playerId / quest.playerName (the playable character; Watch IV hands off Jack ↔ Rosie via the `setPlayer` action)
+ *
+ * Beat semantics: a beat's `dialogueId` is the conversation that *completes* it — for a 'talk' trigger it plays when
+ * the player speaks to the npc, for 'reach'/'time'/'flag'/… it plays when the trigger fires, for 'dialogueEnd' (or no
+ * trigger) it plays as soon as the beat starts; the beat completes on that dialogue's `dialogue:end`.
  *
  * Emits: quest:watchStart { watch }, quest:watchEnd { watch }, quest:beatStart { beat }, quest:objective { text, locationId, title, beatId, optional },
  *        quest:beatComplete { beat }, quest:flag { flag, on }, quest:discover { id, name }, quest:collect { id, kind, name },
- *        quest:reputation { faction, delta, value, reputation }, quest:storyEnd {}, quest:action:startSinking {},
- *        notify { text, kind }, audio:play { id }, cutscene:play { id }, ui:fade { seconds }
+ *        quest:reputation { faction, delta, value, reputation }, quest:storyEnd {}, quest:action:startSinking {}, quest:player { id, name },
+ *        notify { text, kind }, audio:play { id }, cutscene:play { id }, ui:fade { seconds }, camera:shake { intensity, seconds }
  * Listens: dialogue:end { dialogueId }
  */
+import * as THREE from 'three';
 import {
   hhmmToMinutes, dayIndex, absMinutes, clockAbs, clockMinutes, withinLocation, clamp, findLocation, jsonClone,
 } from './storyUtil.js';
@@ -25,6 +31,11 @@ import {
 const DISCOVERY_RADIUS = 3;
 const DISCOVERY_POLL = 0.25;      // seconds between discovery proximity scans
 const SET_TIME_SECONDS = 4;
+/** Actions that place things in the world and must be replayed when a save is loaded (NPCs are despawned by main.js first). */
+const WORLD_ACTIONS = new Set(['spawn', 'moveNpc', 'despawn', 'lights']);
+
+const _v = new THREE.Vector3();   // scratch for world→ship-local conversion (no per-frame allocation)
+const _local = { x: 0, y: 0, z: 0 };
 
 export class QuestManager {
   constructor({
@@ -56,6 +67,9 @@ export class QuestManager {
     this.currentBeat = null;
     this.activeOptional = [];
     this.storyComplete = false;
+    this.playerId = null;
+    this.playerName = null;
+    this._guessPlayer();
 
     // Index beats across all watches
     this.beats = new Map();
@@ -74,6 +88,8 @@ export class QuestManager {
     this._transition = 0;                 // re-entrancy depth
     this._pending = [];                   // beat ids whose completion was requested mid-transition
     this._discoveryTimer = 0;
+    this._locCache = new Map();           // locationId → resolved { id, x, y, z, ... } (LOCATIONS / ship.locations)
+    this._warned = new Set();             // one-shot data warnings
     this._offs = [];
     if (bus && typeof bus.on === 'function') {
       this._offs.push(bus.on('dialogue:end', (p) => this._onDialogueEnd(p)));
@@ -85,14 +101,69 @@ export class QuestManager {
     this._offs = [];
   }
 
+  /** The playable character: CHARACTERS entry flagged isPlayer/playable, else 'player', else 'jack', else "Jack". */
+  _guessPlayer() {
+    const chars = this.characters || {};
+    let id = Object.keys(chars).find((k) => chars[k] && (chars[k].isPlayer || chars[k].playable)) || null;
+    if (!id && chars.player) id = 'player';
+    if (!id && chars.jack) id = 'jack';
+    this.playerId = id;
+    this.playerName = (id && chars[id] && chars[id].name) || 'Jack';
+  }
+
+  /** Hand player control to another character (Watch IV: Jack ↔ Rosie). Emits quest:player { id, name }. */
+  setPlayer(characterId) {
+    const c = characterId && this.characters ? this.characters[characterId] : null;
+    this.playerId = characterId || null;
+    this.playerName = (c && c.name) || (characterId ? String(characterId) : 'Jack');
+    this._emit('quest:player', { id: this.playerId, name: this.playerName });
+  }
+
   // ------------------------------------------------------------------ watches
 
-  /** Begin a watch: sets the clock to its date/time and starts its first beat. */
-  start(watchId) {
+  /**
+   * Start a NEW game from a watch: narrative state is reset (beats of earlier watches count as skipped),
+   * the clock is anchored to the watch's date/startTime unless it already sits on that date at or after
+   * startTime (main.js positions it first and honours `?time=`), and the watch's first beat begins.
+   */
+  start(watchId, { setClock = 'auto' } = {}) {
     const w = this.story.watches.find((x) => x.id === watchId) || this.story.watches[0] || null;
     if (!w) { console.warn('[quest] story has no watches'); return false; }
-    this._beginWatch(w, { setClock: true });
+    this._reset();
+    for (const prev of this.story.watches) {
+      if (prev === w) break;
+      for (const b of prev.beats || []) if (b && b.id) this.completedBeats.add(b.id);
+    }
+    let anchor = setClock === 'auto' ? true : !!setClock;
+    const c = this.clock;
+    if (setClock === 'auto' && c && w.date && c.date === w.date) {
+      const startMin = hhmmToMinutes(w.startTime);
+      if (startMin === null || clockMinutes(c) % 1440 >= startMin) anchor = false;
+    }
+    this._beginWatch(w, { setClock: anchor });
     return true;
+  }
+
+  /** Forget every bit of narrative state (new game). The dialogue runner is closed as well. */
+  _reset() {
+    if (this.dialogue && this.dialogue.active && typeof this.dialogue.end === 'function') {
+      try { this.dialogue.end(); } catch (_) { /* ignore */ }
+    }
+    this.flags = new Set();
+    this.inventory = new Map();
+    this.reputation = { first: 0, third: 0 };
+    this.discovered = new Set();
+    this.collected = new Set();
+    this.completedBeats = new Set();
+    this.watch = null;
+    this.currentBeat = null;
+    this.activeOptional = [];
+    this.storyComplete = false;
+    this._beatStart = new Map();
+    this._awaitDialogue = new Map();
+    this._pending = [];
+    this._discoveryTimer = 0;
+    this._guessPlayer();
   }
 
   _beginWatch(w, { setClock }) {
@@ -147,19 +218,59 @@ export class QuestManager {
         if (!this.activeOptional.includes(beat)) this.activeOptional.push(beat);
       } else {
         this.currentBeat = beat;
+        // A main beat chained (`next`) into another watch carries the watch with it.
+        const w = this._beatWatch.get(beat.id);
+        if (w && w !== this.watch) { this.watch = w; this._emit('quest:watchStart', { watch: w }); }
       }
       this._beatStart.set(beat.id, clockAbs(this.clock));
       this._emit('quest:beatStart', { beat, optional: !!optional });
       this._emitObjective(beat, !!optional);
       this.runActions(beat.onStart);
-      const trig = beat.trigger || {};
-      if (beat.dialogueId && trig.type !== 'talk' && this._isActive(beat.id)) {
-        this._startDialogue(beat.dialogueId);
+      // onStart may have moved the clock (setTime with a date): time triggers count from *after* it.
+      if (this._isActive(beat.id)) this._beatStart.set(beat.id, clockAbs(this.clock));
+      const type = beat.trigger && typeof beat.trigger === 'object' ? beat.trigger.type : null;
+      if (beat.dialogueId && this._isActive(beat.id) && (type === 'dialogueEnd' || !type)) {
+        // The conversation IS the beat: play it now, complete when it ends.
+        this._playBeatDialogue(beat);
       }
     } finally {
       this._transition--;
     }
     this._flushPending();
+  }
+
+  /**
+   * Fire a beat's trigger: play its dialogue (completing on dialogue:end) when it has one that the
+   * data defines, otherwise complete at once. Returns true when the beat was handled.
+   */
+  _fire(beat) {
+    if (!beat || !this._isActive(beat.id)) return false;
+    if (beat.dialogueId && this.dialogues[beat.dialogueId]) return this._playBeatDialogue(beat);
+    if (beat.dialogueId) this._warnOnce(`beat "${beat.id}" names unknown dialogue "${beat.dialogueId}"`);
+    this.complete(beat.id);
+    return true;
+  }
+
+  _playBeatDialogue(beat) {
+    const id = beat.dialogueId;
+    if (!this.dialogues[id]) { this.complete(beat.id); return true; }
+    this._awaitDialogue.set(id, beat.id);
+    if (!this._startDialogue(id)) {
+      if (this._awaitDialogue.get(id) === beat.id) this._awaitDialogue.delete(id);
+      this.complete(beat.id);
+    }
+    return true;
+  }
+
+  _awaitingDialogue(beatId) {
+    for (const v of this._awaitDialogue.values()) if (v === beatId) return true;
+    return false;
+  }
+
+  _warnOnce(msg) {
+    if (this._warned.has(msg)) return;
+    this._warned.add(msg);
+    console.warn(`[quest] ${msg}`);
   }
 
   _emitObjective(beat, optional) {
@@ -257,10 +368,15 @@ export class QuestManager {
     if (this._transition > 0) return;
     const local = this._playerLocal();
     const now = clockAbs(this.clock);
-    const active = this.currentBeat ? [this.currentBeat, ...this.activeOptional] : [...this.activeOptional];
-    for (const beat of active) {
+    const main = this.currentBeat;
+    if (main) this._tick(main, local, now);
+    // Snapshot-free walk: completing an optional beat rebuilds `activeOptional`, so re-check liveness.
+    const opts = this.activeOptional;
+    for (let i = 0; i < opts.length; i++) {
+      const beat = opts[i];
       if (!this._isActive(beat.id)) continue;   // completed by an earlier beat's actions this frame
-      if (this._triggerFires(beat, local, now)) this.complete(beat.id);
+      this._tick(beat, local, now);
+      if (this.activeOptional !== opts) break;  // list was replaced; the rest is picked up next frame
     }
     this._discoveryTimer -= dt;
     if (this._discoveryTimer <= 0) {
@@ -269,14 +385,31 @@ export class QuestManager {
     }
   }
 
+  _tick(beat, local, now) {
+    if (!this._isActive(beat.id) || this._awaitingDialogue(beat.id)) return;
+    if (this._triggerFires(beat, local, now)) this._fire(beat);
+  }
+
+  /** Resolve (and cache) a location by id from LOCATIONS, then ship.locations. */
+  _loc(id) {
+    if (!id) return null;
+    let loc = this._locCache.get(id);
+    if (loc === undefined) {
+      loc = findLocation(this.locations, this.ship, id);
+      if (loc) this._locCache.set(id, loc);   // misses are not cached: ship.locations may fill in later
+    }
+    return loc;
+  }
+
   _triggerFires(beat, local, now) {
     const t = beat.trigger;
     if (!t || typeof t !== 'object') return false;
     switch (t.type) {
       case 'reach': {
         if (!local) return false;
-        const loc = findLocation(this.locations, this.ship, t.locationId || beat.locationId);
-        if (!loc) return false;
+        const locId = t.locationId || beat.locationId;
+        const loc = this._loc(locId);
+        if (!loc) { this._warnOnce(`beat "${beat.id}" reach trigger: unknown location "${locId}"`); return false; }
         return withinLocation(local, loc, Number.isFinite(t.radius) ? t.radius : 3);
       }
       case 'time': {
@@ -333,13 +466,35 @@ export class QuestManager {
     return { done, total };
   }
 
+  /**
+   * The player's feet in ship-local metres (the frame LOCATIONS/DISCOVERIES use). After the break-up the
+   * part under the player (`ship.partAt`) is the frame that still matches the data, since each part's
+   * local frame is the ship frame at the moment of the split. Reuses one scratch object per frame.
+   */
   _playerLocal() {
     const p = this.player && this.player.position;
     if (!p || !Number.isFinite(p.x)) return null;
-    if (this.ship && typeof this.ship.worldToLocal === 'function') {
-      try { return this.ship.worldToLocal(p); } catch (_) { return { x: p.x, y: p.y, z: p.z }; }
-    }
-    return { x: p.x, y: p.y, z: p.z };
+    const ship = this.ship;
+    try {
+      let group = null;
+      if (ship && ship.broken && typeof ship.partAt === 'function') {
+        const part = ship.partAt(p);
+        group = part && part.group ? part.group : null;
+      }
+      if (!group && ship && ship.group && typeof ship.group.worldToLocal === 'function') group = ship.group;
+      if (group) {
+        group.worldToLocal(_v.set(p.x, p.y, p.z));
+        _local.x = _v.x; _local.y = _v.y; _local.z = _v.z;
+        return _local;
+      }
+      if (ship && typeof ship.worldToLocal === 'function') {
+        const l = ship.worldToLocal(p);
+        _local.x = l.x; _local.y = l.y; _local.z = l.z;
+        return _local;
+      }
+    } catch (_) { /* fall through to world coordinates */ }
+    _local.x = p.x; _local.y = p.y; _local.z = p.z;
+    return _local;
   }
 
   _scanDiscoveries(local) {
@@ -363,10 +518,29 @@ export class QuestManager {
     }
     switch (type) {
       case 'npc': return this._interactNpc(id, interactable);
-      case 'item': return this.collect(id, interactable);
-      case 'plaque': return this.discover(id);
+      case 'item': return this.isCollectible(id, interactable) ? this.collect(id, interactable) : false;
+      case 'plaque':
+        if (this.discover(id, interactable)) return true;
+        // Re-reading a plaque shows its text again.
+        if (id && this.discovered.has(id)) { this._notify(this._plaqueText(id, interactable), 'discover'); return true; }
+        return false;
       default: return false;
     }
+  }
+
+  _plaqueText(id, interactable = null) {
+    const d = this.discoveries.find((x) => x && x.id === id) || null;
+    const data = (interactable && interactable.data) || {};
+    const name = (d && d.name) || data.name || (interactable && interactable.label) || id;
+    const plaque = (d && d.plaque) || data.plaque || data.text || null;
+    return plaque ? `${name} — ${plaque}` : `Discovered: ${name}`;
+  }
+
+  /** An 'item' interactable is a story collectible when COLLECTIBLES lists its id (or the builder flagged data.collectible). */
+  isCollectible(id, interactable = null) {
+    if (!id) return false;
+    if (this.collectibles.some((x) => x && x.id === id)) return true;
+    return !!(interactable && interactable.data && interactable.data.collectible);
   }
 
   _activeBeats() {
@@ -375,18 +549,12 @@ export class QuestManager {
 
   _interactNpc(npcId, interactable) {
     if (!npcId) return false;
-    const npcIdOf = (beat) => (beat.trigger && beat.trigger.npcId) || (interactable.data && interactable.data.npcId);
-    // 1. A pending 'talk' trigger for this npc.
+    // 1. A pending 'talk' trigger for this npc (the main beat first, then side quests).
     for (const beat of this._activeBeats()) {
       const t = beat.trigger;
-      if (!t || t.type !== 'talk' || npcIdOf(beat) !== npcId) continue;
-      if (beat.dialogueId && this.dialogues[beat.dialogueId]) {
-        this._awaitDialogue.set(beat.dialogueId, beat.id);
-        if (!this._startDialogue(beat.dialogueId)) { this._awaitDialogue.delete(beat.dialogueId); this.complete(beat.id); }
-      } else {
-        this.complete(beat.id);
-      }
-      return true;
+      if (!t || t.type !== 'talk' || !t.npcId || t.npcId !== npcId) continue;
+      if (this._awaitingDialogue(beat.id)) continue;   // its conversation is already running
+      return this._fire(beat);
     }
     // 2. An ambient conversation for this npc that the story does not currently gate.
     const ambientId = this._ambientDialogueFor(npcId);
@@ -394,19 +562,22 @@ export class QuestManager {
     return false;
   }
 
-  /** '<npcId>_default', or any dialogue for that npc flagged ambient:true whose `requires` conditions pass. */
+  /**
+   * The ambient conversation for an npc the story is not currently gating:
+   * a conditional `ambient:true` dialogue whose `requires` pass (most specific first), else '<npcId>_default',
+   * else any unconditional `ambient:true` dialogue for that npc.
+   */
   _ambientDialogueFor(npcId) {
     const ok = (d) => d && d.npcId === npcId && this._requirementsMet(d.requires || d.conditions);
-    const def = this.dialogues[`${npcId}_default`];
-    if (ok(def)) return `${npcId}_default`;
-    let fallback = null;
+    let generic = null;
     for (const [id, d] of Object.entries(this.dialogues)) {
-      if (!d || d.npcId !== npcId || !d.ambient) continue;
-      if (!this._requirementsMet(d.requires || d.conditions)) continue;
+      if (!d || d.npcId !== npcId || !d.ambient || !ok(d)) continue;
       if (d.requires || d.conditions) return id;   // a conditional ambient line beats a generic one
-      if (!fallback) fallback = id;
+      if (!generic) generic = id;
     }
-    return fallback;
+    const defId = `${npcId}_default`;
+    if (ok(this.dialogues[defId])) return defId;
+    return generic;
   }
 
   _requirementsMet(req) {
@@ -442,9 +613,10 @@ export class QuestManager {
 
   // ------------------------------------------------------- collect / discover
 
-  /** Collect an 'item' interactable. Returns true when it was newly collected. */
+  /** Collect an 'item' interactable. Returns true when it was newly collected; non-collectible items (e.g. the Renault) are left alone. */
   collect(id, interactable = null) {
     if (!id || this.collected.has(id)) return false;
+    if (!this.isCollectible(id, interactable)) return false;
     const c = this.collectibles.find((x) => x && x.id === id) || null;
     this.collected.add(id);
     const obj = (interactable && interactable.object) || (interactable && interactable.data && interactable.data.object)
@@ -463,13 +635,14 @@ export class QuestManager {
   }
 
   /** Mark a DISCOVERIES entry (or plaque) discovered. Returns true when new. */
-  discover(id) {
+  discover(id, interactable = null) {
     if (!id || this.discovered.has(id)) return false;
     const d = this.discoveries.find((x) => x && x.id === id) || null;
     this.discovered.add(id);
-    const name = (d && d.name) || id;
+    const data = (interactable && interactable.data) || {};
+    const name = (d && d.name) || data.name || (interactable && interactable.label) || id;
     this._emit('quest:discover', { id, name });
-    this._notify(d && d.plaque ? `${name} — ${d.plaque}` : `Discovered: ${name}`, 'discover');
+    this._notify(this._plaqueText(id, interactable), 'discover');
     return true;
   }
 
@@ -496,7 +669,9 @@ export class QuestManager {
     const next = cur + n;
     if (next <= 0) this.inventory.delete(item); else this.inventory.set(item, next);
     this._emit('quest:inventory', { item, count: Math.max(0, next), delta: n });
-    this._notify(n > 0 ? `Received: ${item}` : `Lost: ${item}`, 'item');
+    const c = this.collectibles.find((x) => x && x.id === item) || null;
+    const name = (c && c.name) || String(item).replace(/[_-]+/g, ' ');
+    this._notify(n > 0 ? `Received: ${name}` : `Lost: ${name}`, 'item');
   }
 
   /** Execute a list of story actions (ARCHITECTURE §2 Action). Unknown types are ignored with a warning. */
@@ -521,7 +696,9 @@ export class QuestManager {
         break;
       case 'despawn':
         if (this.npcs && typeof this.npcs.despawnNamed === 'function') this.npcs.despawnNamed(a.npcId);
+        else if (this.npcs && typeof this.npcs.despawn === 'function') this.npcs.despawn(a.npcId);
         break;
+      case 'setPlayer': this.setPlayer(a.characterId || a.npcId || a.id); break;
       case 'setTime': this._setTime(a); break;
       case 'startSinking': this._emit('quest:action:startSinking', {}); break;
       case 'sound': this._emit('audio:play', { id: a.id }); break;
@@ -547,9 +724,13 @@ export class QuestManager {
       case 'panic':
         if (this.npcs && typeof this.npcs.setPanic === 'function') this.npcs.setPanic(Number(a.level) || 0);
         break;
-      case 'lights':
-        if (this.ship && this.ship.lights && typeof this.ship.lights.setPower === 'function') this.ship.lights.setPower(Number(a.power));
+      case 'lights': {
+        const lights = this.ship && this.ship.lights;
+        if (!lights) break;
+        if (a.flicker && typeof lights.flicker === 'function') lights.flicker(Number.isFinite(a.seconds) ? a.seconds : 1.5);
+        if (a.power !== undefined && typeof lights.setPower === 'function') lights.setPower(clamp(Number(a.power) || 0, 0, 1));
         break;
+      }
       case 'shake': this._emit('camera:shake', { intensity: a.intensity ?? 0.5, seconds: a.seconds ?? 1 }); break;
       default: console.warn(`[quest] unknown action type "${a.type}"`);
     }
@@ -590,6 +771,7 @@ export class QuestManager {
       beatStart: [...this._beatStart],
       awaitDialogue: [...this._awaitDialogue],
       storyComplete: this.storyComplete,
+      playerId: this.playerId,
     };
   }
 
@@ -606,12 +788,17 @@ export class QuestManager {
     this.collected = new Set(Array.isArray(d.collected) ? d.collected : []);
     this.completedBeats = new Set(Array.isArray(d.completed) ? d.completed.filter((id) => this.beats.has(id)) : []);
     this._beatStart = new Map(Array.isArray(d.beatStart) ? d.beatStart.filter((e) => Array.isArray(e) && this.beats.has(e[0])) : []);
-    this._awaitDialogue = new Map(Array.isArray(d.awaitDialogue) ? d.awaitDialogue.filter((e) => Array.isArray(e)) : []);
+    // A conversation cannot survive a reload: its beat goes back to waiting for its trigger.
+    this._awaitDialogue = new Map();
+    if (this.dialogue && this.dialogue.active && typeof this.dialogue.end === 'function') {
+      try { this.dialogue.end(); } catch (_) { /* ignore */ }
+    }
     this._pending = [];
     this.storyComplete = !!d.storyComplete;
     this.watch = this.story.watches.find((w) => w.id === d.watchId) || this.story.watches[0] || null;
     this.currentBeat = (d.beatId && this.beats.get(d.beatId)) || null;
     this.activeOptional = (Array.isArray(d.optional) ? d.optional : []).map((id) => this.beats.get(id)).filter((b) => b && b.optional !== false);
+    if (d.playerId && this.characters && this.characters[d.playerId]) this.setPlayer(d.playerId); else this._guessPlayer();
     // Hide collectibles already picked up.
     if (this.ship && this.ship.interactables && typeof this.ship.interactables.get === 'function') {
       for (const id of this.collected) {
@@ -619,6 +806,7 @@ export class QuestManager {
         if (it && it.object) { it.object.visible = false; if (it.object.userData) delete it.object.userData.interactable; }
       }
     }
+    this._replayWorldActions();
     if (this.watch) this._emit('quest:watchStart', { watch: this.watch, restored: true });
     if (this.currentBeat) this._emitObjective(this.currentBeat, false);
     else if (this.activeOptional.length) this._emitObjective(this.activeOptional[0], true);
@@ -632,6 +820,25 @@ export class QuestManager {
 
   _watchExhausted(w) {
     return (w.beats || []).every((b) => !b || b.optional || this.completedBeats.has(b.id));
+  }
+
+  /**
+   * Put the world back the way the story left it: main.js despawns every NPC before load(), so the
+   * spawn/moveNpc/despawn (and lights) actions of completed beats, then of the active beats' onStart,
+   * are replayed in story order. Flags, items, reputation and the clock come from the save itself.
+   */
+  _replayWorldActions() {
+    const replay = (actions) => {
+      if (!Array.isArray(actions)) return;
+      for (const a of actions) if (a && WORLD_ACTIONS.has(a.type)) this.runActions(a);
+    };
+    for (const w of this.story.watches) {
+      for (const b of w.beats || []) {
+        if (!b || !b.id) continue;
+        if (this.completedBeats.has(b.id)) { replay(b.onStart); replay(b.onComplete); }
+        else if (this._isActive(b.id)) replay(b.onStart);
+      }
+    }
   }
 
   // ------------------------------------------------------------------ utils

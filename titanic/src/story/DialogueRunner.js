@@ -8,8 +8,9 @@
  *   dialogue.active, dialogue.dialogueId, dialogue.nodeId, dialogue.node
  *
  * Emits  'dialogue:start' { dialogueId, npcId }
- *        'dialogue:node'  { dialogueId, nodeId, speaker, speakerName, text, choices:[text], portraitHint, npcId, hasNext, timed }
+ *        'dialogue:node'  { dialogueId, nodeId, speaker, speakerName, text, choices:[text], choiceKinds:[kind|null], portraitHint, npcId, hasNext, timed }
  *        'dialogue:end'   { dialogueId, npcId }
+ * `{player}` resolves to quest.playerName when a quest is attached (the playable character can change), else a guess from CHARACTERS.
  * Node and choice `effects` are forwarded to quest.runActions (when a quest is attached).
  * Choice `conditions` ({ flag, notFlag, reputationMin:{faction,value}, reputationMax, item }) filter the
  * choices before they are emitted; `choose(index)` indexes into the filtered list the UI received.
@@ -124,7 +125,9 @@ export class DialogueRunner {
     const speaker = node.speaker || this.npcId || 'narrator';
     const speakerName = this.speakerNameFor(speaker);
     const character = this.characters ? this.characters[speaker] : null;
-    const vars = { player: this.playerName, npc: this.speakerNameFor(this.npcId || speaker) };
+    // The quest knows who the player currently is (Watch IV hands off Jack ↔ Rosie).
+    const playerName = (this.quest && typeof this.quest.playerName === 'string' && this.quest.playerName) || this.playerName;
+    const vars = { player: playerName, npc: this.speakerNameFor(this.npcId || speaker) };
     const payload = {
       dialogueId: this.dialogueId,
       nodeId,
@@ -133,6 +136,7 @@ export class DialogueRunner {
       speakerName,
       text: resolvePlaceholders(text, vars),
       choices: choices.map((c) => resolvePlaceholders(c.text, vars)),
+      choiceKinds: choices.map((c) => c.kind || c.tone || null),   // 'heart' | 'wit' | 'spine' | null (design §4 icons)
       portraitHint: character && character.look ? character.look : null,
       hasNext: choices.length === 0 && node.next !== null && node.next !== undefined,
       timed: Number.isFinite(node.timed) ? node.timed : null,
