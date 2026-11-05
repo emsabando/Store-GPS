@@ -107,6 +107,35 @@ export class Environment {
     this.engine.scene.add(this.hemiLight);
   }
 
+  /**
+   * A warm, featureless environment for interiors: bright ivory above (ceilings and lamps),
+   * amber at eye level (panelling), dark below (floors). Returns a PMREM texture or null.
+   */
+  makeInteriorEnv() {
+    if (!this._pmrem) return null;
+    const faces = [];
+    const colours = { px: '#c9a784', nx: '#c9a784', py: '#fff3df', ny: '#9a8368', pz: '#c9a784', nz: '#c9a784' };
+    for (const key of ['px', 'nx', 'py', 'ny', 'pz', 'nz']) {
+      const c = document.createElement('canvas'); c.width = c.height = 8;
+      const g = c.getContext('2d');
+      const grad = g.createLinearGradient(0, 0, 0, 8);
+      if (key === 'py' || key === 'ny') { g.fillStyle = colours[key]; g.fillRect(0, 0, 8, 8); }
+      else { grad.addColorStop(0, '#f1e3cc'); grad.addColorStop(0.5, colours[key]); grad.addColorStop(1, '#5a4a39'); g.fillStyle = grad; g.fillRect(0, 0, 8, 8); }
+      faces.push(c);
+    }
+    const cube = new THREE.CubeTexture(faces);
+    cube.colorSpace = THREE.SRGBColorSpace;
+    cube.needsUpdate = true;
+    try {
+      const rt = this._pmrem.fromCubemap(cube);
+      this._interiorRT = rt;
+      return rt.texture;
+    } catch (err) {
+      console.warn('[world] interior environment failed', err);
+      return null;
+    } finally { cube.dispose(); }
+  }
+
   static modeFor(elDeg) { return elDeg > 2 ? 'day' : elDeg > -9 ? 'twilight' : 'night'; }
 
   /**

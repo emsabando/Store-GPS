@@ -121,7 +121,10 @@ function averageColour(image) {
   } catch (_) { return null; }
 }
 
-/** Materials used mostly indoors: the sky environment map is dimmed on them so rooms read as lamp-lit. */
+/** Strength of the warm interior environment (see setInteriorEnv). */
+const INTERIOR_ENV_INTENSITY = 0.55;
+
+/** Materials used mostly indoors: they get a warm, lamp-coloured environment map instead of the sky. */
 export const INTERIOR_NAMES = new Set(['oakPanel', 'oakDark', 'mahogany', 'walnut', 'sycamore', 'whiteEnamel', 'plasterWhite', 'plasterCream', 'linoDining', 'linoCorridor', 'linoLanding',
   'carpetRed', 'carpetBlue', 'carpetGreen', 'roseCarpet', 'moorishTile', 'marbleWhite', 'velvetGreen', 'velvetRed', 'leatherDark', 'leatherGreen', 'wicker', 'steelGrey', 'steelRusty', 'boilerIron', 'coal', 'woodCrate', 'clothCream', 'clothWhite']);
 
@@ -274,9 +277,26 @@ export class MaterialLibrary {
       mat.roughness = THREE.MathUtils.clamp((def.roughness ?? 0.6) / mean, 0.05, 3);
     }
     mat.userData.materialName = name;
-    if (INTERIOR_NAMES.has(name)) mat.envMapIntensity = 0.3;
+    if (INTERIOR_NAMES.has(name)) {
+      mat.envMapIntensity = 0.3;
+      if (this.interiorEnv) { mat.envMap = this.interiorEnv; mat.envMapIntensity = INTERIOR_ENV_INTENSITY; }
+      (this.interiorMaterials ||= []).push(mat);
+    }
     this._cache.set(name, mat);
     return mat;
+  }
+
+  /**
+   * Give every interior material (INTERIOR_NAMES, existing and future) its own environment map —
+   * a warm, lamp-coloured PMREM — so panelling and plaster are not tinted sky-blue indoors.
+   */
+  setInteriorEnv(texture) {
+    this.interiorEnv = texture || null;
+    for (const mat of this.interiorMaterials || []) {
+      mat.envMap = this.interiorEnv;
+      mat.envMapIntensity = this.interiorEnv ? INTERIOR_ENV_INTENSITY : 0.3;
+      mat.needsUpdate = true;
+    }
   }
 
   /** A private copy of a material (textures are shared) with property overrides applied. */

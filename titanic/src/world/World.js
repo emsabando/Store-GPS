@@ -69,6 +69,10 @@ export class World {
     this.sky.group.position.copy(this.engine.camera.position);
     this.env.update(0, this._state);
     this.env.refresh(this._state);
+    if (this.materials && typeof this.materials.setInteriorEnv === 'function') {
+      const tex = this.env.makeInteriorEnv();
+      if (tex) this.materials.setInteriorEnv(tex);
+    }
     return this;
   }
 
