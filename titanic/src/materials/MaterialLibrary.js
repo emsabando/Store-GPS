@@ -248,7 +248,8 @@ export class MaterialLibrary {
       if (pack.map) {
         mat.map = pack.map;
         // Tint: multiply so the map's average lands on the palette colour (manifest tint or PALETTE).
-        const tintHex = pack.tint || (pack.source === 'vendored' && def.tint !== false ? target : null);
+        // A colour given in the material definition is the design intent and beats the manifest tint.
+        const tintHex = def.colour || pack.tint || (pack.source === 'vendored' && def.tint !== false ? target : null);
         if (tintHex && pack.map.image) {
           const avg = averageColour(pack.map.image), want = new THREE.Color(tintHex);
           if (avg) mat.color.setRGB(THREE.MathUtils.clamp(want.r / Math.max(avg.r, 0.02), 0.02, 4), THREE.MathUtils.clamp(want.g / Math.max(avg.g, 0.02), 0.02, 4), THREE.MathUtils.clamp(want.b / Math.max(avg.b, 0.02), 0.02, 4));
