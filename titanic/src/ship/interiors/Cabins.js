@@ -45,6 +45,13 @@ function cabinBlock(m, g, { x0, x1, zIn, zOut, cabinW = 2.6, depthClass = 'third
     const zOutC = sign > 0 ? Math.min(outAt(xa), outAt(xb), outAt(cx)) : Math.max(outAt(xa), outAt(xb), outAt(cx));
     const depth = Math.abs(zOutC - zIn);
     if (depth < 1.4) continue;                                  // too shallow to be a cabin here
+    // outboard back: the hull skin where the block reaches the side, otherwise a plain partition
+    // (a block facing one alleyway must not stay open toward the next room or corridor)
+    const hbC = spec ? hullHalfBreadth(spec, cx, deckY + 1.2) : Infinity;
+    if (!Number.isFinite(hbC) || Math.abs(zOutC) < hbC - 0.9) {
+      const back = box(m, cabinW, ceiling, 0.08, wallMat, { x: cx, y: ceiling / 2, z: zOutC - sign * 0.04, collide: true });
+      back.castShadow = false; g.add(back);
+    }
     // floor and ceiling strip for this cabin (the bake merges them)
     if (floorMat) { const f = box(m, cabinW, 0.02, depth, floorMat, { x: cx, y: 0.013, z: (zIn + zOutC) / 2, collide: true }); f.castShadow = false; g.add(f); }
     { const c = box(m, cabinW, 0.05, depth, ceilMat, { x: cx, y: ceiling + 0.025, z: (zIn + zOutC) / 2, collide: false }); c.castShadow = false; g.add(c); }
@@ -138,6 +145,7 @@ export function buildCabinsAndCorridors(spec, m, ctx) {
     ['third_class_G_aft', 'cor_G_aft', 'third', 'bunk3', 2.4],
   ];
   const corridorsById = new Map();
+  const sideCover = new Map();   // corridor id → { port: [[x0, x1]…], stbd: […] } sides a cabin block was built against
   for (const d of spec.decks || []) for (const c of d.corridors || []) corridorsById.set(c.id, { ...c, deck: d.id, y: d.y });
   let blockCount = 0;
   for (const [roomId, corId, cls, bunk, cabinW] of blocks) {
@@ -153,6 +161,8 @@ export function buildCabinsAndCorridors(spec, m, ctx) {
     const style = STYLES[blockCount % STYLES.length];
     const floorMat = tiled(m, cls === 'first' ? style.floor : cls === 'second' ? 'linoCorridor' : 'linoCorridor', cls === 'first' ? 2.0 : 0.9, undefined, cls === 'third' ? { color: new THREE.Color(0xe7a58f) } : {});
     for (const s of sides) {
+      if (!sideCover.has(corId)) sideCover.set(corId, { port: [], stbd: [] });
+      sideCover.get(corId)[s.zIn === c.z0 ? 'port' : 'stbd'].push([x0, x1]);
       cabinBlock(m, g, { x0, x1, zIn: s.zIn, zOut: s.zOut, cabinW, depthClass: cls === 'crew' ? 'third' : cls, ceiling, bunk, wallMat: cls === 'first' ? style.walls : 'whiteEnamel', spec, deckY: r.y, floorMat, ceilMat: cls === 'third' ? 'whitePaintedSteel' : 'plasterWhite', nameBase: `${roomId}_${corId}_${s.zIn > 0 ? 's' : 'p'}`, interactables });
     }
     g.position.y = r.y;
@@ -161,6 +171,28 @@ export function buildCabinsAndCorridors(spec, m, ctx) {
     const firstSide = sides[0];
     if (firstSide) locations.push(loc(`cabin_${roomId}_${corId}`, `${r.name} (${cls === 'first' ? style.name : cls})`, r.deck, x0 + cabinW * 0.5 + 0.3, r.y, firstSide.zIn + Math.sign(firstSide.zOut - firstSide.zIn) * 1.5, Math.PI / 2));
     blockCount++;
+  }
+
+  // ---------------- plain walls along corridor sides nothing was built against (no view into the void)
+  const blockRoomIds = new Set(blocks.map((b) => b[0]));
+  for (const c of corridorsById.values()) {
+    const d = (spec.decks || []).find((dd) => dd.id === c.deck);
+    const cover = sideCover.get(c.id) || { port: [], stbd: [] };
+    for (const side of ['port', 'stbd']) {
+      const z = side === 'port' ? c.z0 : c.z1;
+      const touchesSide = (o) => (side === 'port' ? (o.z1 >= c.z0 - 0.6 && o.z0 < c.z0) : (o.z0 <= c.z1 + 0.6 && o.z1 > c.z1)) && o.x1 > c.x0 && o.x0 < c.x1;
+      // already handled: cabin blocks on this side, rooms that build their own walls and doors, cross alleyways
+      const taken = [...cover[side]];
+      for (const r of (d && d.rooms) || []) if (!blockRoomIds.has(r.id) && Number.isFinite(r.z0) && touchesSide(r)) taken.push([r.x0, r.x1]);
+      for (const o of (d && d.corridors) || []) if (o.id !== c.id && touchesSide(o)) taken.push([o.x0 - 0.3, o.x1 + 0.3]);
+      taken.sort((a, b) => a[0] - b[0]);
+      const g = new THREE.Group(); g.name = `CorridorWalls.${c.id}.${side}`;
+      const addWall = (xa, xb) => { if (xb - xa < 0.4) return; g.add(wall(m, xa, z, xb, z, 0, 2.35, { gaps: [], material: 'whiteEnamel', panelled: false })); };
+      let cursor = c.x0;
+      for (const [a, b] of taken) { if (a > cursor) addWall(cursor, Math.min(a, c.x1)); cursor = Math.max(cursor, b); if (cursor >= c.x1) break; }
+      if (cursor < c.x1) addWall(cursor, c.x1);
+      if (g.children.length) { g.position.y = c.y; group.add(g); }
+    }
   }
 
   // ---------------- the parlour suites B-52/54/56 (port) and B-51/53/55 (starboard) with private promenades
