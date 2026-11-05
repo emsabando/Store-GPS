@@ -3,7 +3,8 @@
  * builds the static collision BVH, controls lamps, and performs the break-up split.
  */
 import * as THREE from 'three';
-import { MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh';
+import { MeshBVH } from 'three-mesh-bvh';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildHull } from './Hull.js';
 import { buildDecks } from './Decks.js';
 import { buildSuperstructure } from './Superstructure.js';
@@ -12,6 +13,26 @@ import { buildPublicRoomsA } from './interiors/PublicRoomsA.js';
 import { buildPublicRoomsB } from './interiors/PublicRoomsB.js';
 import { buildCabinsAndCorridors } from './interiors/Cabins.js';
 import { buildMachinery } from './interiors/Machinery.js';
+
+/** Merge the position-only, world-transformed geometry of meshes into one non-indexed BufferGeometry (relative to `parentInverse`). */
+function mergeColliders(meshes, parentInverse) {
+  const parts = [];
+  const m = new THREE.Matrix4();
+  for (const mesh of meshes) {
+    let g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+    const pos = g.getAttribute('position');
+    if (!pos || pos.count < 3) continue;
+    const only = new THREE.BufferGeometry();
+    only.setAttribute('position', pos.clone());
+    m.multiplyMatrices(parentInverse, mesh.matrixWorld);
+    only.applyMatrix4(m);
+    parts.push(only);
+    if (g !== mesh.geometry) g.dispose();
+  }
+  if (!parts.length) return null;
+  const merged = parts.length === 1 ? parts[0] : mergeGeometries(parts, false);
+  return merged;
+}
 
 const nextFrame = () => new Promise((r) => (globalThis.requestAnimationFrame ? requestAnimationFrame(() => r()) : setTimeout(r, 0)));
 
@@ -144,13 +165,10 @@ export class Ship {
       meshes.push(m);
       this.group.updateMatrixWorld(true);
     }
-    // Geometry generator produces ship-local (root-relative) merged geometry.
+    // Merge ship-local (root-relative) collision geometry.
     const parentMatrixInverse = new THREE.Matrix4().copy(root.matrixWorld).invert();
-    const generator = new StaticGeometryGenerator(meshes);
-    generator.attributes = ['position'];
-    generator.applyWorldTransforms = true;
-    const merged = generator.generate();
-    merged.applyMatrix4(parentMatrixInverse);
+    const merged = mergeColliders(meshes, parentMatrixInverse);
+    if (!merged) throw new Error('collision merge produced no geometry');
     merged.computeBoundingBox();
     const bvh = new MeshBVH(merged, { targetLeafSize: 8 });
     merged.boundsTree = bvh;
@@ -245,10 +263,8 @@ export class Ship {
     partGroup.traverse((o) => { if (o.isMesh && o.userData.collide && o.geometry?.attributes?.position) meshes.push(o); });
     if (!meshes.length) return { bvh: null, mesh: null };
     const inv = new THREE.Matrix4().copy(partGroup.matrixWorld).invert();
-    const gen = new StaticGeometryGenerator(meshes);
-    gen.attributes = ['position'];
-    const geom = gen.generate();
-    geom.applyMatrix4(inv);
+    const geom = mergeColliders(meshes, inv);
+    if (!geom) return { bvh: null, mesh: null };
     const bvh = new MeshBVH(geom, { targetLeafSize: 8 });
     geom.boundsTree = bvh;
     const mesh = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({ visible: false }));

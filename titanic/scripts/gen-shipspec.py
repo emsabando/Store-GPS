@@ -40,11 +40,15 @@ Y_KEEL = -DRAUGHT
 # ---- sheer (relative to midship deck edge) -------------------------------------------------
 SHEER_FWD = (86.0 - 74.0) * FT    # 3.66 m at the stem (forecastle deck)
 SHEER_AFT = (79.0 - 74.0) * FT    # 1.52 m at the taffrail (poop)
+SUPER_FWD_M, SUPER_AFT_M = 175 * FT, 725 * FT    # superstructure extent: decks are flat here
 def sheer(ft_from_bow):
+    """Game sheer: zero along the superstructure (flat interior decks), rising to the forecastle and poop ends."""
     s = ft_from_bow * FT
-    if s <= MID_M:
-        return SHEER_FWD * ((MID_M - s) / MID_M) ** 2
-    return SHEER_AFT * ((s - MID_M) / (LOA_FT * FT - MID_M)) ** 2
+    if s < SUPER_FWD_M:
+        return SHEER_FWD * ((SUPER_FWD_M - s) / SUPER_FWD_M) ** 2
+    if s > SUPER_AFT_M:
+        return SHEER_AFT * ((s - SUPER_AFT_M) / (LOA_FT * FT - SUPER_AFT_M)) ** 2
+    return 0.0
 
 # ---- hull form ------------------------------------------------------------------------------
 HALF_BEAM = 92.5 * FT / 2  # 14.1 m
@@ -897,10 +901,15 @@ landmark('first_class_stateroom', 'First-class stateroom, C Deck', 'C', 400, 9.0
 landmark('officers_quarters', "Officers' quarters, Boat Deck", 'boat', 258, -3.5, 0.0)
 landmark('crows_nest', "Crow's nest", 'C', 42, 0.0, 0.0, y=29.0)
 landmark('compass_platform', 'Compass platform between funnels 2 and 3', 'boat', 436, 0.0, 0.0, y=BOAT + 0.9 + 2.2)
-landmark('exterior_starboard_quarter', 'Exterior view: starboard quarter', 'world', 700, 90.0, math.radians(150), y=20.0, extra={'mode': 'free', 'pitch': -0.12, 'xFromBowOverride': 700})
-landmark('exterior_port_bow', 'Exterior view: port bow', 'world', 20, -110.0, math.radians(-35), y=22.0, extra={'mode': 'free', 'pitch': -0.14})
-LANDMARKS['exterior_starboard_quarter']['x'] = x_of(700) - 80
-LANDMARKS['exterior_port_bow']['x'] = x_of(20) + 70
+def exterior(lid, name, pos, look, y, pitch):
+    dx, dz = look[0] - pos[0], look[1] - pos[1]
+    yaw = math.atan2(-dz, dx)           # PlayerController: forward = (cos yaw, 0, -sin yaw)
+    LANDMARKS[lid] = {'id': lid, 'name': name, 'deck': 'world', 'x': round(pos[0], 2), 'y': y, 'z': round(pos[1], 2), 'yaw': round(yaw, 4), 'mode': 'free', 'pitch': pitch}
+exterior('exterior_starboard_quarter', 'Exterior view: starboard quarter', (-175.0, 95.0), (-20.0, 0.0), 24.0, -0.10)
+exterior('exterior_port_bow', 'Exterior view: port bow', (185.0, -115.0), (40.0, 0.0), 24.0, -0.10)
+exterior('exterior_broadside_port', 'Exterior view: port broadside', (0.0, -230.0), (0.0, 0.0), 30.0, -0.08)
+exterior('exterior_stern_low', 'Exterior view: stern, low', (-200.0, 30.0), (-120.0, 0.0), 8.0, 0.08)
+exterior('exterior_bow_low', 'Exterior view: bow from the water', (175.0, 40.0), (100.0, 0.0), 6.0, 0.12)
 
 # =============================================================================================
 # Assemble and write
