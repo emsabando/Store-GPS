@@ -64,3 +64,11 @@ js/app.js       # UI rendering, modals, chart, routing
 ```
 
 Pure vanilla HTML/CSS/JS — no dependencies, fully offline.
+
+---
+
+## Also in this repository: *A Night to Remember Forever* (`titanic/`)
+
+A free-roam 3D recreation of RMS Titanic for the browser (Three.js, 4K), with a parody
+story of the 1997 film. See [`titanic/README.md`](titanic/README.md) for how to run it,
+the controls and the testing tools.
