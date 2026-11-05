@@ -13,8 +13,9 @@ real; discovery plaques quote documented history only.
 
 | | |
 | --- | --- |
-| ![Grand Staircase](screenshots/hero/grand_staircase_A.webp) | ![Bridge](screenshots/hero/bridge.webp) |
+| ![Grand Staircase](screenshots/hero/grand_staircase_A.webp) | ![Smoking Room](screenshots/hero/smoking_room.webp) |
 | ![Dialogue](screenshots/hero/dialogue_well_deck.webp) | ![Sinking](screenshots/hero/sinking_exterior.webp) |
+| ![Boat deck at night](screenshots/hero/boat_deck_night.webp) | ![Deck plan](screenshots/hero/deck_plan.webp) |
 
 ## Running it
 
