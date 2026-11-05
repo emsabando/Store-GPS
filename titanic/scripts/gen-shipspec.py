@@ -194,10 +194,10 @@ openarea('boat', 'Engineers Promenade', 506, 542)
 openarea('boat', 'Second Class Promenade', 542, 685)
 deckhouse('boat', 'bh_bridge', 'Navigating bridge (open, roofed)', 190, 203, -14.0, 14.0, 2.5,
           windows={'type': 'square', 'pitch': 1.1, 'w': 0.8, 'h': 1.0, 'y': 1.3})
-deckhouse('boat', 'bh_officers', "Wheelhouse and officers' quarters", 203, 305, -7.2, 7.2, 2.5,
+deckhouse('boat', 'bh_officers', "Wheelhouse and officers' quarters", 203, 298, -7.2, 7.2, 2.5,
           roof=['collapsible A (stbd)', 'collapsible B (port)', 'Marconi aerial lead-in', 'skylights'])
 deckhouse('boat', 'bh_funnel1', 'Funnel 1 casing (fan rooms)', 228, 266, -4.6, 4.6, 2.8)
-deckhouse('boat', 'bh_entrance_fwd', 'First Class Entrance / Grand Staircase dome house', 296, 339, -8.7, 8.7, 2.6,
+deckhouse('boat', 'bh_entrance_fwd', 'First Class Entrance / Grand Staircase dome house', 298, 339, -8.7, 8.7, 2.6,
           roof=['glass and wrought-iron dome (oval)'])
 deckhouse('boat', 'bh_gym', 'Gymnasium', 339, 383, 4.6, 10.1, 2.9,
           windows={'type': 'square', 'pitch': 1.4, 'w': 1.0, 'h': 1.3, 'y': 1.2})
@@ -229,7 +229,7 @@ room('boat', 'officers_cabins_port', "Officers' Cabins (Chief, 1st, 2nd, 3rd, 5t
 room('boat', 'officers_cabins_stbd', "4th Officer's Cabin and bathroom", 'officer', 250, 270, 0.6, 7.2, 2.5, 'White painted', None, None, [{'type': 'bed', 'count': 1}])
 room('boat', 'officers_mess', "Officers' Smoking Room and Mess", 'officer', 270, 285, 0.6, 7.2, 2.5, 'Oak panelled mess', {'floor': 'linoCorridor', 'walls': 'oakPanel'}, None,
      [{'type': 'table', 'count': 1, 'layout': 'long'}, {'type': 'chair', 'count': 8}])
-room('boat', 'marconi_room', 'Marconi Wireless Suite (silent room, operating room, bedroom)', 'crew', 285, 305, -6.0, 6.0, 2.5,
+room('boat', 'marconi_room', 'Marconi Wireless Suite (silent room, operating room, bedroom)', 'crew', 285, 298, -6.0, 6.0, 2.5,
      'White painted; spark transmitter in the soundproofed silent room (port), operating desk (centre), bedroom (starboard)',
      {'floor': 'linoCorridor', 'walls': 'whiteEnamel'}, None,
      [{'type': 'desk', 'count': 1, 'layout': 'operating desk with Marconi multiple tuner'}, {'type': 'bed', 'count': 2}],
@@ -238,7 +238,7 @@ room('boat', 'gymnasium', 'Gymnasium', 'first', 339, 383, 4.6, 10.1, 2.9, 'White
      {'floor': 'oakPanel', 'walls': 'whiteEnamel', 'ceiling': 'plasterWhite'}, {'floor': '#8B6A3E', 'walls': '#F1EEE6'},
      [{'type': 'gymMachine', 'count': 1, 'layout': 'electric camel'}, {'type': 'gymMachine', 'count': 1, 'layout': 'electric horse'}, {'type': 'gymMachine', 'count': 2, 'layout': 'rowing machines'}, {'type': 'gymMachine', 'count': 2, 'layout': 'cycle racing machines'}, {'type': 'gymMachine', 'count': 1, 'layout': 'punching bag'}],
      {'fixture': 'ceilingGlobe', 'colourK': 2350}, ['illuminated map of the world on the aft wall', '44 ft x 18 ft'], ['spitting_lesson_nearby'])
-room('boat', 'entrance_boat_fwd', 'First Class Entrance (Boat Deck gallery)', 'first', 296, 339, -8.7, 8.7, 4.2, 'Oak panelled gallery under the dome',
+room('boat', 'entrance_boat_fwd', 'First Class Entrance (Boat Deck gallery)', 'first', 298, 339, -8.7, 8.7, 4.2, 'Oak panelled gallery under the dome',
      {'floor': 'linoDining', 'walls': 'oakPanel', 'ceiling': 'glassFrosted'}, None, [], {'fixture': 'chandelier', 'colourK': 2350}, ['stairwell gallery 56 x 33 ft'])
 room('boat', 'entrance_boat_2nd', 'Second Class Entrance (Boat Deck)', 'second', 644, 670, -4.6, 4.6, 2.6, 'Oak and white, stair and lift to F deck',
      {'floor': 'linoCorridor', 'walls': 'oakPanel'})
@@ -861,7 +861,7 @@ landmark('forecastle', 'Forecastle deck by the foremast', 'B', 60, 3.0, 0.0, y=Y
 landmark('well_deck_fwd', 'Forward well deck (third-class promenade)', 'C', 150, 0.0, 0.0, y=DECK_Y['C'] + sheer(150))
 landmark('bridge', 'Navigating bridge (centre, by the telegraphs)', 'boat', 196, 0.0, 0.0)
 landmark('wheelhouse', 'Wheelhouse (at the wheel)', 'boat', 212, 0.0, 0.0)
-landmark('marconi_room', 'Marconi operating room', 'boat', 295, 0.0, 0.0)
+landmark('marconi_room', 'Marconi operating room', 'boat', 291, 0.0, 0.0)
 landmark('boat_deck_port_fwd', 'Boat deck, port, forward boat group (by the band)', 'boat', 312, -11.5, 0.0)
 landmark('boat_deck_stbd_aft', 'Boat deck, starboard, by the gymnasium rail', 'boat', 360, 12.0, 0.0)
 landmark('gymnasium', 'Gymnasium', 'boat', 361, 7.3, math.pi)
