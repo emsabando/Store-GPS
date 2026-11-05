@@ -84,30 +84,58 @@ function box(w, h, d) { return new THREE.BoxGeometry(w, h, d); }
 
 function lathe(points, seg = 18) { return new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), seg); }
 
-/** Merge [{ g, m }] parts into one mesh with a material array (materials de-duplicated). */
+/**
+ * Shared character materials: one MeshStandardMaterial with vertex colours per roughness class,
+ * so a dressed character is one draw call per limb instead of one per costume material, and
+ * all NPCs share a handful of shader programs. Colours (and a touch of emissive) are baked
+ * into the vertex colour attribute from the part materials the wardrobe hands us.
+ */
+const SHARED_MATS = new Map();
+function sharedMaterial(roughness, metalness) {
+  const r = Math.round(roughness * 4) / 4, mt = metalness > 0.5 ? 1 : 0;
+  const key = `${r}|${mt}`;
+  let m = SHARED_MATS.get(key);
+  if (!m) {
+    m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: r, metalness: mt * 0.8, name: `character_${key}` });
+    m.userData.shared = true;
+    SHARED_MATS.set(key, m);
+  }
+  return m;
+}
+const _col = new THREE.Color();
+
+/** Merge [{ g, m }] parts into one mesh: colours become vertex colours on a shared material. */
 export function mergeParts(parts, name) {
-  const mats = [];
   const geoms = [];
-  const matIndexOfGeom = [];   // material slot for each merged part (parallel to `geoms`)
+  let rough = 0, metal = 0, n = 0;
   for (const { g, m } of parts) {
     if (!g) continue;
-    let idx = mats.indexOf(m);
-    if (idx < 0) { idx = mats.length; mats.push(m); }
     const ng = g.index ? g.toNonIndexed() : g;
     ng.clearGroups();
-    if (!ng.attributes.uv) ng.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(ng.attributes.position.count * 2), 2));
-    geoms.push(ng);
-    matIndexOfGeom.push(idx);
+    const count = ng.attributes.position.count;
+    if (!ng.attributes.uv) ng.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
+    // vertex colour = material colour (linear), brightened a little by any emissive
+    _col.copy(m && m.color ? m.color : new THREE.Color(0xffffff));
+    if (m && m.emissive && m.emissiveIntensity) { const k = Math.min(1, m.emissiveIntensity) * 0.5; _col.r += m.emissive.r * k; _col.g += m.emissive.g * k; _col.b += m.emissive.b * k; }
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) { colors[i * 3] = _col.r; colors[i * 3 + 1] = _col.g; colors[i * 3 + 2] = _col.b; }
+    ng.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    // keep only the attributes that merge cleanly
+    const slim = new THREE.BufferGeometry();
+    slim.setAttribute('position', ng.attributes.position);
+    if (ng.attributes.normal) slim.setAttribute('normal', ng.attributes.normal); else slim.computeVertexNormals();
+    slim.setAttribute('uv', ng.attributes.uv);
+    slim.setAttribute('color', ng.attributes.color);
+    geoms.push(slim);
+    rough += (m && typeof m.roughness === 'number') ? m.roughness : 0.8;
+    metal += (m && typeof m.metalness === 'number') ? m.metalness : 0;
+    n++;
     if (ng !== g) g.dispose();
   }
-  // mergeGeometries(…, true) writes one group per input geometry with materialIndex = geometry
-  // index, NOT our material slot. Remap, otherwise parts past mats.length have no material:
-  // they neither render nor survive a raycast (three reads material[idx].side → TypeError).
-  const merged = mergeGeometries(geoms, true);
-  for (let i = 0; i < merged.groups.length; i++) merged.groups[i].materialIndex = matIndexOfGeom[i];
-  for (const g of geoms) g.dispose();
+  const merged = geoms.length === 1 ? geoms[0] : mergeGeometries(geoms, false);
+  if (geoms.length > 1) for (const g of geoms) g.dispose();
   merged.computeBoundingSphere();
-  const mesh = new THREE.Mesh(merged, mats.length === 1 ? mats[0] : mats);
+  const mesh = new THREE.Mesh(merged, sharedMaterial(n ? rough / n : 0.8, n ? metal / n : 0));
   mesh.name = name;
   mesh.castShadow = true;
   mesh.receiveShadow = true;

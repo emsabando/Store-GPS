@@ -254,7 +254,7 @@ export function makeCharacter(materials, look = {}) {
       if (o.isMesh) {
         o.geometry.dispose();
         const mats = Array.isArray(o.material) ? o.material : [o.material];
-        for (const m of mats) m.dispose();
+        for (const m of mats) if (m && !m.userData.shared) m.dispose();   // character materials are shared
       }
     });
   }
