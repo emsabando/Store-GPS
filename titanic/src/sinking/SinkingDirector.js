@@ -200,6 +200,8 @@ export class SinkingDirector {
     const m = Math.max(0, Number(minutesAfter) || 0);
     this._setClockAbs(this._strikeAbs + m);
     this.update(0);
+    // Jumping past the strike: the berg has already passed down the side — put it where the pass ends.
+    if (m > 0.5 && this.iceberg && this.iceberg.active) { this.iceberg.t = this.iceberg.seconds; this.iceberg.update(0); }
     return this.state;
   }
 

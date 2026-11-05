@@ -59,8 +59,14 @@ export function collider(group, w, h, d, { x = 0, y = h / 2, z = 0 } = {}) {
 const group = (name) => { const g = new THREE.Group(); g.name = name; return g; };
 const LAMP_COLOR = 0xffa552;
 
+const _globeMats = new Map();   // one material per intensity so the ship bake can merge thousands of globes
 export function lampGlobe(m, r = 0.12, intensity = 2.5) {
-  const mat = m.clone('glassFrosted', { emissive: new THREE.Color(LAMP_COLOR), emissiveIntensity: intensity, transparent: false, opacity: 1, transmission: 0, roughness: 0.6 });
+  const key = `${intensity}`;
+  let mat = _globeMats.get(key);
+  if (!mat) {
+    mat = m.clone('glassFrosted', { emissive: new THREE.Color(LAMP_COLOR), emissiveIntensity: intensity, transparent: false, opacity: 1, roughness: 0.6 });
+    _globeMats.set(key, mat);
+  }
   const g = mesh(cachedGeometry(`sphere:${r}`, () => new THREE.SphereGeometry(r, 14, 10)), mat, { shadow: false });
   g.userData.emissiveLamp = true;
   return g;
@@ -263,7 +269,7 @@ export function makeDoor(m, { w = 0.9, h = 2.1, style = 'oak', open = false, dou
       const slab = box(m, w - 0.02, h - 0.02, style === 'wtDoor' ? 0.12 : 0.05, mat, { x: dir * w / 2, y: h / 2, collide: true });
       leaf.add(slab);
       if (style === 'oak' || style === 'white') {
-        for (const [py, ph] of [[h * 0.3, h * 0.35], [h * 0.72, h * 0.3]]) leaf.add(box(m, w * 0.65, ph, 0.02, mat === m.get('oakPanel') ? m.get('oakDark') : m.get('plasterCream'), { x: dir * w / 2, y: py, z: 0.03 }));
+        for (const [py, ph] of [[h * 0.3, h * 0.35], [h * 0.72, h * 0.3]]) leaf.add(box(m, w * 0.65, ph, 0.02, mat, { x: dir * w / 2, y: py, z: 0.03 }));
         leaf.add(mesh(cachedGeometry('sphere:knob', () => new THREE.SphereGeometry(0.03, 8, 6)), m.get('brass'), { x: dir * (w - 0.1), y: 1.0, z: 0.05 }));
       }
       if (style === 'wtDoor') {

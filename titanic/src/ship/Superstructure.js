@@ -282,7 +282,7 @@ export function buildSuperstructure(spec, materials, ctx) {
 
   // ---- domes over the grand staircases, skylights on raised roofs, compass platform ----
   const gs = spec.grandStaircases || {};
-  const domeMat = materials.clone('glassFrosted', { side: THREE.DoubleSide, emissive: new THREE.Color(0xffa552), emissiveIntensity: 0.6, transmission: 0.2, opacity: 0.85, transparent: true });
+  const domeMat = materials.clone('glassFrosted', { side: THREE.DoubleSide, emissive: new THREE.Color(0xffa552), emissiveIntensity: 0.6, opacity: 0.85, transparent: true });
   domeMat.name = 'dome.glass';
   const ribMat = materials.get('wroughtIron');
   for (const [key, d] of Object.entries(gs)) {

@@ -23,6 +23,7 @@ export const QUALITY_PRESETS = Object.freeze({
     name: 'low',
     shadowMapSize: 1024,
     shadowType: THREE.PCFShadowMap,
+    shadowEveryN: 3,               // refresh the sun shadow map every N frames
     shadowCascades: 1,
     ao: 'off',                 // 'off' | 'half' | 'full'
     bloom: false,
@@ -38,6 +39,7 @@ export const QUALITY_PRESETS = Object.freeze({
     name: 'medium',
     shadowMapSize: 2048,
     shadowType: THREE.PCFShadowMap,       // r187 removed PCFSoftShadowMap (falls back to PCF with a warning)
+    shadowEveryN: 2,               // refresh the sun shadow map every N frames
     shadowCascades: 1,
     ao: 'off',
     bloom: true,
@@ -53,6 +55,7 @@ export const QUALITY_PRESETS = Object.freeze({
     name: 'high',
     shadowMapSize: 4096,
     shadowType: THREE.PCFShadowMap,       // r187 removed PCFSoftShadowMap (falls back to PCF with a warning)
+    shadowEveryN: 2,               // refresh the sun shadow map every N frames
     shadowCascades: 1,
     ao: 'half',
     bloom: true,
@@ -68,6 +71,7 @@ export const QUALITY_PRESETS = Object.freeze({
     name: 'ultra',
     shadowMapSize: 4096,
     shadowType: THREE.PCFShadowMap,       // r187 removed PCFSoftShadowMap (falls back to PCF with a warning)
+    shadowEveryN: 1,               // refresh the sun shadow map every N frames
     shadowCascades: 2,
     ao: 'full',
     bloom: true,

@@ -45,6 +45,7 @@ if (!args.helm) await page.evaluate(() => { const h = document.querySelector('#h
 if (args.sink) {
   await page.evaluate((m) => { window.__game.setTime('23:40'); window.__game.startSinking(); window.__game.sinking.jumpTo?.(m); }, parseFloat(args.sink));
 }
+if (args.calls) await page.evaluate(() => { window.__shotCalls = true; });
 if (args.eval) await page.evaluate((code) => { (new Function('game', code))(window.__game); }, String(args.eval));
 for (const loc of locations) {
   const info = await page.evaluate(async (id) => {
@@ -61,11 +62,16 @@ for (const loc of locations) {
       const px = []; for (const [fx, fy] of [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) { const b4 = new Uint8Array(4); gl.readPixels(Math.floor(W * fx), Math.floor(H * fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b4); px.push(Array.from(b4)); }
       probe = { els: els.slice(0, 4), px, cut: (document.querySelector('#cutscene') || {}).className, cam: window.__game.engine.camera === window.__game.player.camera ? 'player' : 'other' };
     } catch (e) { probe = { err: String(e) }; }
-    return { post: !!window.__game.engine.postEnabled, cam: [c.position.x, c.position.y, c.position.z].map((v) => +v.toFixed(1)), mode: p.mode, yaw: +p.yaw.toFixed(2), pitch: +p.pitch.toFixed(2), probe, stats: window.__game.engine.stats };
+    const st = window.__game.engine.stats || {};
+    let custom = null;
+    try { if (typeof window.__shotProbe === 'function') custom = window.__shotProbe(); } catch (e) { custom = { err: String(e).slice(0, 120) }; }
+    let calls = null;
+    if (window.__shotCalls) { const e = window.__game.engine, r = e.renderer; calls = {}; e.renderOnce(); e.renderOnce(); calls.full = r.info.render.calls; const au = r.shadowMap.autoUpdate; r.shadowMap.autoUpdate = true; r.shadowMap.enabled = false; e.renderOnce(); calls.noShadow = r.info.render.calls; e.setPostEnabled(false); e.renderOnce(); calls.plain = r.info.render.calls; r.shadowMap.enabled = true; r.shadowMap.autoUpdate = au; e.setPostEnabled(true); e.renderOnce(); }
+    return { post: !!window.__game.engine.postEnabled, cam: [c.position.x, c.position.y, c.position.z].map((v) => +v.toFixed(1)), mode: p.mode, yaw: +p.yaw.toFixed(2), pitch: +p.pitch.toFixed(2), calls: calls || st.drawCalls, tris: st.triangles, custom, ms: +(+st.frameMs || 0).toFixed(1), probe };
   }, loc);
   const file = path.join(outDir, `${loc}.png`);
   await page.screenshot({ path: file, type: 'png' });
-  console.log(loc, JSON.stringify(info).slice(0, 220), '->', path.relative(root, file));
+  console.log(loc, JSON.stringify(info).slice(0, args.custom ? 2000 : 400), '->', path.relative(root, file));
 }
 if (errors.length) { console.log('ERRORS:'); for (const e of errors.slice(0, 10)) console.log('  ', e.slice(0, 300)); }
 await browser.close(); server.close();

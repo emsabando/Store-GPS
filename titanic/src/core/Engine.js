@@ -45,6 +45,9 @@ export class Engine {
 
     /** Test hook (§11): the loop runs update callbacks but only renders on renderOnce(). */
     this.manualRender = false;
+    this._shadowFrame = 0;
+    /** Refresh the shadow map every N frames (1 = every frame). Set from the quality preset. */
+    this.shadowEveryN = 1;
     /** Optional frame-rate cap while visible (0 = uncapped, i.e. the display refresh rate). */
     this.maxFps = 0;
     /** Tiny tick rate while the tab is hidden (rAF is paused by the browser; we keep the sim alive, never render). */
@@ -253,6 +256,11 @@ export class Engine {
     if (this._contextLost) return;
     const r = this.renderer;
     r.info.reset();
+    // The sun shadow map is the most expensive pass (every caster in a 240 m box): refresh it
+    // every `shadowEveryN` frames below ultra. Shadows of moving things lag by a frame at most.
+    const n = this.shadowEveryN || 1;
+    if (n > 1) { r.shadowMap.autoUpdate = false; r.shadowMap.needsUpdate = (this._shadowFrame++ % n) === 0; }
+    else if (!r.shadowMap.autoUpdate) { r.shadowMap.autoUpdate = true; }
     try {
       if (this.postEnabled) {
         this.post.render(dt);

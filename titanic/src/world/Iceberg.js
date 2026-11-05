@@ -97,7 +97,8 @@ export class Iceberg {
     const geo = makeIcebergGeometry({ detail, lengthM: 32, beamM: 22, topM: 20, keelM: 55, seed: this.seed });
     this.material = new THREE.MeshPhysicalMaterial({
       name: 'Iceberg', vertexColors: true, color: 0xf2fbff, roughness: 0.35, metalness: 0,
-      transmission: hi ? 0.15 : 0, thickness: 2, attenuationColor: new THREE.Color(0x2f86d6), attenuationDistance: 4, ior: 1.31,
+      // transmission stays 0: it would re-render the opaque scene every frame the berg is on screen
+      transmission: 0, thickness: 2, attenuationColor: new THREE.Color(0x2f86d6), attenuationDistance: 4, ior: 1.31,
       clearcoat: 0.25, clearcoatRoughness: 0.45, emissive: new THREE.Color(0x9ccbe6), emissiveIntensity: 0.02, envMapIntensity: 1.0,
       side: THREE.FrontSide,
     });

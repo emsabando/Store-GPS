@@ -141,7 +141,7 @@ export function buildPublicRoomsB(spec, m, ctx) {
     g.add(box(m, px1 - px0, 0.1, pz1 - pz0, poolTile, { x: (px0 + px1) / 2, y: -depth, z: (pz0 + pz1) / 2, collide: true }));
     g.add(box(m, 0.1, depth, pz1 - pz0, poolTile, { x: px0, y: -depth / 2, z: (pz0 + pz1) / 2, collide: true }), box(m, 0.1, depth, pz1 - pz0, poolTile, { x: px1, y: -depth / 2, z: (pz0 + pz1) / 2, collide: true }));
     g.add(box(m, px1 - px0, depth, 0.1, poolTile, { x: (px0 + px1) / 2, y: -depth / 2, z: pz0, collide: true }), box(m, px1 - px0, depth, 0.1, poolTile, { x: (px0 + px1) / 2, y: -depth / 2, z: pz1, collide: true }));
-    const water = box(m, px1 - px0 - 0.1, 0.02, pz1 - pz0 - 0.1, m.clone('glass', { color: new THREE.Color(0x3a8fb8), transparent: true, opacity: 0.6, roughness: 0.05, transmission: 0.0 }), { x: (px0 + px1) / 2, y: -0.45, z: (pz0 + pz1) / 2, collide: false });
+    const water = box(m, px1 - px0 - 0.1, 0.02, pz1 - pz0 - 0.1, m.clone('glass', { color: new THREE.Color(0x3a8fb8), transparent: true, opacity: 0.6, roughness: 0.05}), { x: (px0 + px1) / 2, y: -0.45, z: (pz0 + pz1) / 2, collide: false });
     water.castShadow = false; g.add(water);
     const steps = makeStairs(m, { width: 1.2, rise: 0.2, run: 0.3, steps: 7, style: 'steel', rails: true }); steps.position.set(px0 + 0.8, -depth + 0.1, pz1 - 0.3); steps.rotation.y = Math.PI; g.add(steps);
     for (const z of [pz0 - 0.1, pz1 + 0.1]) { const rail = makeRailing(m, { length: px1 - px0, height: 0.9, balusterPitch: 0.5, style: 'pipe' }); rail.position.set((px0 + px1) / 2, 0.02, z); g.add(rail); }

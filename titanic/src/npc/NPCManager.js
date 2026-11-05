@@ -100,6 +100,12 @@ export class NPCManager {
     return this._fallbackRoot;
   }
 
+  /** Sun shadows only for NPCs outdoors (no roomId on their area): indoor casters cost a draw each. */
+  _applyShadow(group, area) {
+    const outdoors = !(area && area.roomId);
+    group.traverse((o) => { if (o.isMesh) o.castShadow = outdoors; });
+  }
+
   /**
    * Where a named NPC stands for a landmark: 2.2 m ahead of the point along its yaw, facing back
    * at it. Beats teleport the player to the same landmark id, so standing ON the point would put
@@ -168,6 +174,7 @@ export class NPCManager {
       npc.state.hasTarget = false;
       npc.state.wait = 0;
       npc.data.area = findArea(this.spec, deck, sp.x, sp.z);
+      this._applyShadow(npc.group, npc.data.area);
       this._setupPatrol(npc);
       return npc;
     }
@@ -175,6 +182,7 @@ export class NPCManager {
     npc.data.home.x = pos.x; npc.data.home.y = y; npc.data.home.z = pos.z; npc.data.home.yaw = sp.yaw;
     npc.data.deck = deck;
     npc.data.area = findArea(this.spec, deck, pos.x, pos.z);
+    this._applyShadow(npc.group, npc.data.area);
     npc.state.yaw = sp.yaw;
     npc.state.goto = null;
     npc.state.behaviour = this.panic > 0 && npc.data.behaviour !== 'play' ? 'flee' : npc.data.behaviour;
@@ -257,6 +265,7 @@ export class NPCManager {
     group.position.set(x, y, z);
     group.userData.npcId = id;
     group.userData.part = { x0: x, x1: x }; // so Ship.split() moves the whole NPC, not its limbs
+    this._applyShadow(group, area);          // only people on open decks cast sun shadows
     const interactable = { id, type: 'npc', label, data: { npcId: id, name, faction } };
     group.userData.interactable = interactable;
     group.traverse((o) => { if (o.isMesh) o.userData.interactable = interactable; });

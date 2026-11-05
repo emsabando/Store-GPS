@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { bakeShip } from './Bake.js';
 import { buildHull } from './Hull.js';
 import { buildDecks } from './Decks.js';
 import { buildSuperstructure } from './Superstructure.js';
@@ -99,18 +100,19 @@ export class Ship {
 
   async build(onProgress = () => {}) {
     const ctx = this._ctx();
+    // [label, builder, name, interior]: names are explicit because minification mangles fn.name.
     const steps = [
-      ['Riveting the hull', buildHull],
-      ['Laying the decks', buildDecks],
-      ['Raising funnels and masts', buildSuperstructure],
-      ['Carving the Grand Staircase', buildGrandStaircases],
-      ['Furnishing the public rooms', buildPublicRoomsA],
-      ['Setting the dining saloon', buildPublicRoomsB],
-      ['Fitting cabins and corridors', buildCabinsAndCorridors],
-      ['Lighting the boilers', buildMachinery],
+      ['Riveting the hull', buildHull, 'hull', false],
+      ['Laying the decks', buildDecks, 'decks', false],
+      ['Raising funnels and masts', buildSuperstructure, 'superstructure', false],
+      ['Carving the Grand Staircase', buildGrandStaircases, 'grandStaircases', true],
+      ['Furnishing the public rooms', buildPublicRoomsA, 'publicRoomsA', true],
+      ['Setting the dining saloon', buildPublicRoomsB, 'publicRoomsB', true],
+      ['Fitting cabins and corridors', buildCabinsAndCorridors, 'cabins', true],
+      ['Lighting the boilers', buildMachinery, 'machinery', true],
     ];
     let i = 0;
-    for (const [label, fn] of steps) {
+    for (const [label, fn, name, interior] of steps) {
       onProgress((i / steps.length) * 100, label);
       await nextFrame();
       const t0 = performance.now();
@@ -118,12 +120,19 @@ export class Ship {
       try {
         result = fn(this.spec, this.materials, ctx);
       } catch (err) {
-        console.error(`[ship] builder ${fn.name} failed`, err);
-        if (globalThis.__errors) globalThis.__errors.push(`builder ${fn.name}: ${err && err.message}`);
+        console.error(`[ship] builder ${name} failed`, err);
+        if (globalThis.__errors) globalThis.__errors.push(`builder ${name}: ${err && err.message}`);
       }
-      if (result) this._merge(result, fn.name);
-      ctx.log(`${fn.name} ${(performance.now() - t0).toFixed(0)} ms`);
+      if (result) this._merge(result, name, interior);
+      ctx.log(`${name} ${(performance.now() - t0).toFixed(0)} ms`);
       i++;
+    }
+    if (ctx.bake !== false) {
+      onProgress(88, 'Bolting it all together');
+      await nextFrame();
+      const t0 = performance.now();
+      try { bakeShip(this, { log: ctx.log }); } catch (err) { console.error('[ship] bake failed; continuing unbaked', err); }
+      ctx.log(`bake ${(performance.now() - t0).toFixed(0)} ms`);
     }
     onProgress(92, 'Surveying for collisions');
     await nextFrame();
@@ -132,10 +141,12 @@ export class Ship {
     return this;
   }
 
-  _merge(result, builderName) {
+  _merge(result, builderName, interior = false) {
     if (result.group) {
       result.group.name = result.group.name || builderName;
       this.group.add(result.group);
+      // Interior geometry never sees the sun: keep it out of the shadow pass (thousands of draws).
+      if (interior) result.group.traverse((o) => { if (o.isMesh) o.castShadow = false; });
     }
     for (const loc of result.locations || []) this.locations.set(loc.id, { ...loc });
     for (const l of result.lights || []) { l.userData.baseIntensity = l.intensity; this.lightsList.push(l); }

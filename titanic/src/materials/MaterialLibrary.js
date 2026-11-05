@@ -54,7 +54,9 @@ const metal = (roughness, hex, brushed = true) => ({ metalness: 1, roughness, co
 const paint = (hex, roughness = 0.45, wear = 0.15) => ({ roughness, metalness: 0.05, normalScale: 0.5, fallback: (s) => P.makePaint({ color: hex, wear, roughness, size: s }) });
 const cloth = (hex) => ({ roughness: 0.92, normalScale: 0.5, fallback: (s) => P.makeCanvas({ color: hex, threadsPerMetre: 1400, sizeMetres: 0.3, size: Math.min(512, s) }) });
 const carpet = (hex, pattern, accent) => ({ roughness: 1, physical: true, props: { sheen: 0.35, sheenRoughness: 0.9, sheenColor: new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), 0.4) }, normalScale: 0.6, fallback: (s) => P.makeCarpet({ color: hex, pattern, accent, size: s }) });
-const glassLike = (props) => ({ physical: true, roughness: 0.05, metalness: 0, tint: false, props: { transmission: 0.9, ior: 1.5, thickness: 0.01, transparent: true, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1, ...props }, noMaps: true });
+// Plain alpha glass: physical transmission would make three.js render the whole opaque scene a second
+// time whenever any pane is on screen (and there are 1,900 lamp globes and windows).
+const glassLike = (props) => ({ physical: false, roughness: 0.05, metalness: 0, tint: false, props: { transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1, ...props }, noMaps: true });
 
 const DEFS = {
   teakDeck: { roughness: 0.68, normalScale: 0.8, fallback: (s) => P.makePlanks({ widthM: 1.2, lengthM: 2.4, plankW: 0.15, plankL: 2.4, color: PALETTE.teakDeck, gapColor: '#1a1510', size: s }) },
@@ -82,8 +84,8 @@ const DEFS = {
   canvas: { roughness: 0.9, normalScale: 0.7, colour: '#d2c4a0', fallback: (s) => P.makeCanvas({ color: PALETTE.canvas, size: s }) },
   canvasCover: { roughness: 0.9, normalScale: 0.7, props: { side: THREE.DoubleSide }, colour: '#767a6e', fallback: (s) => P.makeCanvas({ color: PALETTE.canvasCover, size: s }) },
   glass: glassLike({}),
-  glassFrosted: { ...glassLike({ transmission: 0.6, thickness: 0.02, emissive: new THREE.Color('#ffd9a0'), emissiveIntensity: 0.5 }), roughness: 0.5 },
-  glassStained: { ...glassLike({ transmission: 0.45, thickness: 0.02, emissive: new THREE.Color('#ffb060'), emissiveIntensity: 0.15 }), roughness: 0.25, noMaps: false, tint: false, fallback: (s) => P.makeTiles({ tileW: 0.06, pattern: 'mosaic', colours: ['#d9a441', '#b03a2e', '#2d6b4a', '#2f4f8a', '#e8d9b0', '#8a3d7a'], grout: '#1a1a1a', groutW: 0.004, gloss: 0.1, size: Math.min(512, s) }) },
+  glassFrosted: { ...glassLike({ opacity: 0.92, emissive: new THREE.Color('#ffd9a0'), emissiveIntensity: 0.5 }), roughness: 0.5 },
+  glassStained: { ...glassLike({ opacity: 0.88, emissive: new THREE.Color('#ffb060'), emissiveIntensity: 0.15 }), roughness: 0.25, noMaps: false, tint: false, fallback: (s) => P.makeTiles({ tileW: 0.06, pattern: 'mosaic', colours: ['#d9a441', '#b03a2e', '#2d6b4a', '#2f4f8a', '#e8d9b0', '#8a3d7a'], grout: '#1a1a1a', groutW: 0.004, gloss: 0.1, size: Math.min(512, s) }) },
   lifeboatWhite: paint(PALETTE.lifeboatWhite, 0.5, 0.2),
   rope: { roughness: 0.9, normalScale: 0.9, fallback: (s) => P.makeCanvas({ color: PALETTE.rope, threadsPerMetre: 60, sizeMetres: 0.25, size: Math.min(512, s) }) },
   velvetRed: { roughness: 0.85, physical: true, props: { sheen: 1, sheenRoughness: 0.6, sheenColor: new THREE.Color('#d25a6a') }, normalScale: 0.4, fallback: (s) => P.makeCanvas({ color: PALETTE.velvetRed, threadsPerMetre: 2000, sizeMetres: 0.3, size: Math.min(512, s) }) },
@@ -92,7 +94,7 @@ const DEFS = {
   leatherGreen: { roughness: 0.48, physical: true, props: { clearcoat: 0.15, clearcoatRoughness: 0.5 }, normalScale: 0.6, fallback: (s) => P.makeFlat({ color: PALETTE.leatherGreen, roughness: 0.48, mottle: 0.15, size: s }) },
   wicker: { roughness: 0.8, normalScale: 0.9, props: { side: THREE.DoubleSide }, fallback: (s) => P.makeCanvas({ color: PALETTE.wicker, threadsPerMetre: 120, sizeMetres: 0.5, size: s }) },
   coal: { roughness: 0.5, metalness: 0.05, normalScale: 1, fallback: (s) => P.makeFlat({ color: PALETTE.coal, roughness: 0.5, mottle: 0.5, size: s }) },
-  ice: { physical: true, roughness: 0.35, tint: false, props: { transmission: 0.25, thickness: 2, ior: 1.31, attenuationColor: new THREE.Color('#9fd0e8'), attenuationDistance: 3, clearcoat: 0.6, clearcoatRoughness: 0.3 }, normalScale: 0.8, fallback: (s) => P.makeFlat({ color: PALETTE.ice, roughness: 0.35, mottle: 0.1, size: s }) },
+  ice: { physical: true, roughness: 0.35, tint: false, props: { ior: 1.31, attenuationColor: new THREE.Color('#9fd0e8'), attenuationDistance: 3, clearcoat: 0.6, clearcoatRoughness: 0.3 }, normalScale: 0.8, fallback: (s) => P.makeFlat({ color: PALETTE.ice, roughness: 0.35, mottle: 0.1, size: s }) },
   snow: { roughness: 0.92, normalScale: 0.8, fallback: (s) => P.makeFlat({ color: PALETTE.snow, roughness: 0.92, mottle: 0.05, size: s }) },
   woodCrate: { roughness: 0.82, normalScale: 0.9, fallback: (s) => P.makePlanks({ widthM: 1, lengthM: 1, plankW: 0.12, plankL: 1, color: PALETTE.woodCrate, gapColor: '#3a2a18', grain: 0.9, variation: 0.7, size: s }) },
   carRed: { physical: true, roughness: 0.25, metalness: 0.15, props: { clearcoat: 1, clearcoatRoughness: 0.05 }, noMaps: true },

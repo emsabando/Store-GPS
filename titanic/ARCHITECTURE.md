@@ -297,6 +297,18 @@ ui:photoMode, ui:mode, ui:requestPointerLock, ui:toggleView, audio:play`
 * `player/Character.js → optional `yawOffset` (radians) on the makeCharacter result` — NPCManager sets `group.rotation.y = yaw + (character.yawOffset ?? 0)`, assuming the model faces +x at rotation 0 when absent. (NPCManager, feature-detected.)
 * `story/QuestManager.js → quest.playerId / quest.playerName, event quest:player { id, name }, action { type:'setPlayer', characterId }` — the playable character changes in Watch IV (Jack ↔ Rosie); DialogueRunner resolves `{player}` from it and the UI may relabel the HUD. (QuestManager, additive.)
 
+### Integration additions (post-review)
+
+- `ship.groundAt(x, fromY, z, maxDrop = 4)` → ship-local y of the first collision surface below the
+  point, or `null`. Used by `NPCManager.spawnCrowd` so crowds stand on the deck, not on hatch covers.
+- `materials.setInteriorEnv(texture)` — interior materials (`INTERIOR_NAMES`) get a warm PMREM
+  (`Environment.makeInteriorEnv()`) as their own `envMap`; the sky PMREM stays on exteriors.
+- Landmark `standOff` (metres, default 2.2): named NPCs wait that far ahead of the landmark along
+  its yaw, facing it (`NPCManager._standPoint`). Set `standOff: 0` to stand exactly on the point.
+- `World.build()` syncs the sky dome before the first environment cube render; never render the
+  env cube from an unsynced Preetham sky (NaN PMREM → black frame).
+- Room shells clamp `room.ceiling` to the deck spacing (`heightToNext − 0.2`).
+
 ## 11. Additional binding details (added by the integrator)
 
 * **Break-up seam.** `ctx.breakX` (ship-local x between funnels 3 and 4, default from `SHIP.breakX` or the funnel midpoint)
