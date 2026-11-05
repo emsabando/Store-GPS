@@ -65,9 +65,12 @@ class Input {
   requestPointerLock() {
     if (!this._element || this.locked) return;
     try {
+      // Browsers only grant pointer lock after a user gesture; without one the promise rejects
+      // ("A user gesture is required") — skip quietly rather than surface an unhandled rejection.
+      if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.isActive) return;
       const p = this._element.requestPointerLock({ unadjustedMovement: true });
-      if (p && p.catch) p.catch(() => { try { this._element.requestPointerLock(); } catch { /* ignore */ } });
-    } catch { try { this._element.requestPointerLock(); } catch { /* ignore */ } }
+      if (p && p.catch) p.catch(() => { try { const q = this._element.requestPointerLock(); if (q && q.catch) q.catch(() => {}); } catch { /* ignore */ } });
+    } catch { try { const q = this._element.requestPointerLock(); if (q && q.catch) q.catch(() => {}); } catch { /* ignore */ } }
   }
 
   exitPointerLock() {
