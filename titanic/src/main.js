@@ -78,11 +78,15 @@ async function main() {
   installDebugAPI(game);
 
   // ---- state machine ----
+  // Attract view: while the menu is up the camera circles the ship from off the port bow.
+  const attract = { on: false, t: 0, a0: -2.2 };
   const setMode = (mode) => {
     state.mode = mode;
     const playing = mode === 'playing';
     player.enabled = playing;
     if (!playing && mode !== 'photo') input.exitPointerLock();
+    if (mode === 'menu') { attract.on = true; attract.t = 0; player.setMode('free'); }
+    else attract.on = false;
     bus.emit('game:mode', { mode });
   };
   const startNewGame = ({ watch = params.get('watch') || 'watch1', at = params.get('at') } = {}) => {
@@ -91,9 +95,9 @@ async function main() {
     if (params.get('time')) clock.set(params.get('time'));
     const spawnId = at || (w && w.beats[0] && w.beats[0].locationId) || 'spawn_southampton';
     const loc = ship.locations.get(spawnId) || ship.locations.get('spawn_southampton') || { x: 0, y: ship.deckY('boat') || 19, z: 0, yaw: 0 };
+    player.setMode(loc.mode || 'first');          // before the teleport: free mode would offset the eye
     player.teleportLocal(loc.x, (loc.y ?? 0) + 0.1, loc.z, loc.yaw || 0);
     if (loc.pitch !== undefined) player.pitch = loc.pitch;
-    if (loc.mode) player.setMode(loc.mode);
     npcs.despawnAll();
     quest.start(w ? w.id : 'watch1');
     audio.init().catch(() => {});
@@ -116,6 +120,7 @@ async function main() {
       clock.setDate(data.clock.date); clock.minutes = data.clock.minutes;
       npcs.despawnAll();
       quest.load(data.quest);
+      player.setMode('first');
       player.teleportLocal(data.player.x, data.player.y + 0.05, data.player.z, data.player.yaw || 0);
       if (data.sinking && !sinking.active) sinking.start();
       setMode('playing');
@@ -204,6 +209,13 @@ async function main() {
       player.update(dt);
       npcs.update(dt, player.position);
       quest.update(dt);
+    } else if (attract.on && state.mode === 'menu') {
+      attract.t += dt;
+      const a = attract.a0 + attract.t * 0.025, r = 250, h = 32;
+      player.position.set(Math.cos(a) * r, h, Math.sin(a) * r);
+      player.yaw = Math.atan2(player.position.z, -player.position.x);   // look at the ship's centre
+      player.pitch = -0.07;
+      player.update(dt);
     }
     if (state.mode !== 'menu' && state.mode !== 'loading') sinking.update(dt);
     audio.update(dt, { inside: player.inside, deck: player.currentDeck, wind: world.wind || 0.3, speed: player.speed || 0, sinking: sinking.active, mode: state.mode });

@@ -16,7 +16,7 @@
   --font-engrave: 'Cinzel', Georgia, serif;
   --font-body: 'Cormorant Garamond', Georgia, serif;
   --font-doc: 'Old Standard TT', 'Times New Roman', Georgia, serif;
-  --fs-xs: .75rem; --fs-sm: .875rem; --fs-md: 1.125rem; --fs-lg: 1.5rem; --fs-xl: 2.25rem; --fs-2xl: 3.5rem; --fs-hero: 5rem;
+  --fs-xs: .75rem; --fs-sm: .875rem; --fs-md: 1.125rem; --fs-lg: 1.5rem; --fs-xl: 2.25rem; --fs-2xl: 3.5rem; --fs-hero: clamp(2.8rem, 6.5vw, 5.5rem);
   --grad-brass: linear-gradient(160deg, #F2D27A 0%, #C9A227 35%, #7A5B12 70%, #E2C25A 100%);
   --grad-bronze: linear-gradient(160deg, #8C6B3D 0%, #6E5428 45%, #3F2E12 100%);
   --grad-mahogany: linear-gradient(180deg, #5A2518 0%, #4A1E12 40%, #3A160D 100%);
