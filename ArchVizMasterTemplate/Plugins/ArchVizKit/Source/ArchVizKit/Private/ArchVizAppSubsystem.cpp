@@ -789,7 +789,7 @@ bool UArchVizAppSubsystem::HandleCommandJson(const FString& Json)
 	else if (Cmd == TEXT("setTimeLapse")) { if (Environment) { Environment->SetTimeLapse(static_cast<float>(Num(TEXT("speed"), 0.0))); } }
 	else if (Cmd == TEXT("setWeather"))
 	{
-		EArchVizWeather Weather;
+		EArchVizWeather Weather = EArchVizWeather::Clear;
 		if (Environment && StringToEnum(Str(TEXT("weather")), Weather))
 		{
 			Environment->SetWeather(Weather, static_cast<float>(Num(TEXT("blend"), 3.0)));
@@ -797,7 +797,7 @@ bool UArchVizAppSubsystem::HandleCommandJson(const FString& Json)
 	}
 	else if (Cmd == TEXT("setSeason"))
 	{
-		EArchVizSeason Season;
+		EArchVizSeason Season = EArchVizSeason::Summer;
 		if (Environment && StringToEnum(Str(TEXT("season")), Season))
 		{
 			Environment->SetSeason(Season, static_cast<float>(Num(TEXT("blend"), 2.0)));
@@ -805,7 +805,7 @@ bool UArchVizAppSubsystem::HandleCommandJson(const FString& Json)
 	}
 	else if (Cmd == TEXT("setQuality"))
 	{
-		EArchVizQuality Quality;
+		EArchVizQuality Quality = EArchVizQuality::High;
 		if (StringToEnum(Str(TEXT("quality")), Quality))
 		{
 			UArchVizBlueprintLibrary::ApplyQualityPreset(Quality);

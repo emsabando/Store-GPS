@@ -144,8 +144,8 @@ ArchVizMasterTemplate/
 
 ## Status
 
-- The plugin targets UE 5.4+ APIs. It was written and statically checked without an engine
-  available, so **it hasn't been compiled yet**. Expect the first build to need small fixes.
+- The plugin compiles on **UE 5.8** (Win64, Development Editor), first build on a real project.
+  Its runtime behaviour hasn't been tested in a level yet.
 - Widgets, materials, levels and other `.uasset` content aren't included because they're binary.
   [docs/UI_KIT.md](docs/UI_KIT.md) specifies them, and
   [docs/PROJECT_SETUP.md](docs/PROJECT_SETUP.md) has a prompt for building them with Claude Code
